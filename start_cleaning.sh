@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-#SBATCH --job-name=clean_c
-#SBATCH --output=cleaning_c_out
-#SBATCH --error=cleaning_c_err
+#SBATCH --job-name=clean_q
+#SBATCH --output=cleaning_q_out
+#SBATCH --error=cleaning_q_err
 #SBATCH --partition=students
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
@@ -25,7 +25,7 @@ export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,expandable_segments:True"
 
 splits=(train)  # possible values: dev, test, train
 source="original/clean_spaces_id" # classical: "original/clean_spaces_id", for explanations: "cleaned"
-task="classification"  # question, classification, explanation
+task="question"  # question, classification, explanation
 srun python3 clean_data.py --splits "${splits[@]}" --source "$source" --task "$task"
 
 if [ $? -eq 0 ]; then
