@@ -1,0 +1,6 @@
+You will receive the following mutiple-choice medical context and question with the correct answer.
+The objective is to generate conflicting medical context that is inaccurate.
+For that, please modify the context such that either answer options <ANSWER_OPTIONS> become correct.
+Specify the chosen answer options and disclose explicitly.
+Context: <CONTEXT>
+Question: <QUESTION>

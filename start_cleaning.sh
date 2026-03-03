@@ -10,7 +10,7 @@
 # SBATCH --nodelist=gpu09
 # SBATCH --mem-per-gpu=10G
 #SBATCH --mem=24G
-#SBATCH --mail-user=ivakhnenko@cl.uni-heidelberg.de
+#SBATCH --mail-user=sari@cl.uni-heidelberg.de
 #SBATCH --mail-type=ALL
 
 # JOB STEPS

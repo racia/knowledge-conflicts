@@ -24,6 +24,7 @@ def load_model_tokenizer(model_name: str) -> tuple:
     available_models = (
         "meta-llama/Meta-Llama-3-8B-Instruct",
         "meta-llama/Llama-3.3-70B-Instruct",
+        "gemini-2.5-flash-lite",
     )
     if model_name not in available_models:
         raise ValueError(f"Model '{model_name}' is not supported. Available models: {available_models}")
