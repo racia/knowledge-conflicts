@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-#SBATCH --job-name=clean_q
-#SBATCH --output=cleaning_q_out
-#SBATCH --error=cleaning_q_err
+#SBATCH --job-name=plant_q
+#SBATCH --output=planting_q_out
+#SBATCH --error=planting_q_err
 #SBATCH --partition=students
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
@@ -28,22 +28,22 @@ esac
 
 source ~/.bashrc 2>/dev/null
 echo "Activating conda env..."
-conda activate kc1
+conda activate kc
 
 export CUDA_VISIBLE_DEVICES=${SLURM_JOB_GPUS:-}
 export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,expandable_segments:True"
 
-splits=(train)  # possible values: dev, test, train
+splits=(dev)  # possible values: dev, test, train
 source="original/clean_spaces_id" # classical: "original/clean_spaces_id", for explanations: "cleaned"
-task="question"  # question, classification, explanation
-srun python3 clean_data.py --splits "${splits[@]}" --source "$source" --task "$task"
+#task="question"  # question, classification, explanation
+srun python3 conflict_planting.py --splits "${splits[@]}" --source "$source"
 
 if [ $? -eq 0 ]; then
-    echo "Python script clean_data.py executed successfully."
+    echo "Python script conflict_planting.py executed successfully."
 else
-    echo "Error: Python script clean_data.py failed."
+    echo "Error: Python script conflict_planting.py failed."
     return 1 2>/dev/null || exit 1
 fi
 
-echo "Data cleaning job completed."
+echo "Conflict planting job completed."
 conda deactivate
