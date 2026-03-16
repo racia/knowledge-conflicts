@@ -5,7 +5,7 @@ from transformers import BitsAndBytesConfig
 from torch.amp import autocast
 import torch
 
-from utils.prompts.examples import FORMATTED_EXAMPLES
+from utils.prompts.examples import get_examples_for_task
 
 
 def load_model_tokenizer(model_name: str) -> tuple:
@@ -52,20 +52,27 @@ def load_model_tokenizer(model_name: str) -> tuple:
     return model, tokenizer
 
 
-def prepare_prompt(task_type: str, tokenizer):
+def prepare_prompt(task_type: str, tokenizer, specialization: str = None):
     """
     Prepare the prompt for question formatting by combining the formatted examples.
 
     :param task_type: The type of task for which to prepare the prompt
                       (e.g., "question", "explanation").
     :param tokenizer: The tokenizer to use for encoding the prompt.
+    :param specialization: Optional specialization for the task
+                           (e.g., a specific prompt for some filtering ids).
     :return: A string containing the formatted examples to be used in the prompt.
     """
-    path = Path(f"utils/prompts/cleaning/{task_type}.txt")
+    task = f"{task_type}_{specialization}" if specialization else task_type
+    path = Path(f"utils/prompts/cleaning/{task}.txt")
+    if not path.exists():
+        print(f"Warning: Prompt file {path} does not exist. Using standard prompt.")
+        path = Path(f"utils/prompts/cleaning/{task_type}.txt")
     with open(path, "r", encoding="utf-8") as f:
         base_prompt = f.read()
-    joined_examples = "\n".join(FORMATTED_EXAMPLES.get(task_type, []))
-    base_prompt.replace("<EXAMPLES>", joined_examples)
+    joined_examples = "\n".join(get_examples_for_task(task))
+    base_prompt = base_prompt.replace("<EXAMPLES>", joined_examples)
+    print("Prepared prompt with examples:\n", base_prompt)
     prompt_inputs = tokenizer.apply_chat_template(
         [{"role": "system", "content": base_prompt}],
         add_generation_prompt=False,
@@ -120,16 +127,24 @@ def format_chat(system_inputs: dict, tokenizer, **kwargs) -> dict:
     :param explanation: The explanation string (required for "explanation" task).
     :param question: The original question string (required for "question" task).
     :param answer_options: A list of answer option strings (required for "question" task).
+    :param no_ans_op: Whether to include answer options in the question formatting
+                      (optional, influences only "question" task, default: False).
     :return: A list of formatted chat messages.
     """
     answer_options = "\n- ".join(kwargs.get("answer_options", []))
+    if kwargs.get("no_ans_op"):
+        q_beginning = f"Question: {kwargs.get('question', '')}"
+    else:
+        q_beginning = f"Question: {kwargs.get('question', '')}\nAnswer options:\n{answer_options}"
     task_map = {
-        "question": f"Question: {kwargs.get('question', '')}\nAnswer options:\n{answer_options}" + " Take a deep breath and return only the formatted question: ",
-        "explanation": f"Explanation: {kwargs.get('explanation', '')}" + " Take a deep breath and return only the formatted explanation: ",
-        "classification": f"Paragraph: {kwargs.get('explanation', '')}" + " Take a deep breath and return only 'true' or 'false': ",
+        "question": q_beginning + "\nTake a deep breath and return only the formatted question: ",
+        "explanation": f"Explanation: {kwargs.get('explanation', '')}" + "\nTake a deep breath and return only the formatted explanation: ",
+        "classification": f"Paragraph: {kwargs.get('explanation', '')}" + "\nTake a deep breath and return only 'true' or 'false': ",
     }
+    task = task_map[kwargs.get("task")]
+    # print(f"Formatted user message for task '{kwargs.get('task')}':\n——————\n{task}\n———")
     user_inputs = tokenizer.apply_chat_template(
-        [{"role": "user", "content": task_map[kwargs.get("task")]}],
+        [{"role": "user", "content": task}],
         add_generation_prompt=True,
         tokenize=True,
         return_dict=True,
