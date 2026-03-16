@@ -15,9 +15,19 @@
 
 # JOB STEPS
 echo "Starting data cleaning job..."
-cd ~/knowledge-conflicts || exit 1
+case "$PWD" in 
+    "$HOME"/*/knowledge-conflicts|"$HOME"/knowledge-conflicts)
+    ;; # Already in the correct directory, do nothing
+    *)
+    if ! cd "$HOME/knowledge-conflicts"; then
+        echo "Failed to change directory to $HOME/knowledge-conflicts" >&2
+        return 1 2>/dev/null || exit 1
+    fi
+    ;;
+esac
 
 source ~/.bashrc 2>/dev/null
+echo "Activating conda env..."
 conda activate kc1
 
 export CUDA_VISIBLE_DEVICES=${SLURM_JOB_GPUS:-}
@@ -33,7 +43,7 @@ if [ $? -eq 0 ]; then
     echo "Python script clean_data.py executed successfully."
 else
     echo "Error: Python script clean_data.py failed."
-    exit 1
+    return 1 2>/dev/null || exit 1
 fi
 
 echo "Data cleaning job completed."

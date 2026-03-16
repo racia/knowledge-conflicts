@@ -1,2 +1,19 @@
 .DS_Store
 .idea/
+
+# Ignore error/output files
+*_out.txt
+*_out
+*_err
+
+# Ignore VS Code settings
+.vscode/
+
+# Ignore data files
+data/MedMCQA/
+
+# Ignore Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
