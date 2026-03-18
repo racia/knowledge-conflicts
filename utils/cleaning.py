@@ -42,8 +42,7 @@ def prepare_entry(entry: dict, task: str) -> dict:
     :param task: The cleaning task to perform ("question" or "explanation").
     :return: A dictionary with the formatted input for the model.
     """
-    if task == "question":
-        print(entry["question"])
+    if task in ["question", "answer"]:
         return {
             "question": entry["question"],
             "answer_options": [entry["opa"], entry["opb"], entry["opc"], entry["opd"]],
@@ -63,7 +62,16 @@ def one_letter_options(answer_options: list[str]) -> bool:
     :param answer_options: A list of answer option strings to check.
     :return: True if all answer options are single letters, False otherwise.
     """
-    return all(re.match(r"^[abcdef]$", op) for op in answer_options)
+    return all(re.fullmatch(r"[abcdef]", op) for op in answer_options)
+
+
+def only_option_letters(answer_options: list[str]) -> bool:
+    """
+    Check if all answer options consist solely of single letters (e.g., "a", "b", "c", "d", "e") without any additional text.
+    :param answer_options: A list of answer option strings to check.
+    :return: True if all answer options are exactly single letters, False otherwise.
+    """
+    return all(re.fullmatch(r"(?i)[abcdef]+", op.strip()) for op in answer_options)
 
 
 def ans_op_present(question: str, answer_options: list[str]) -> list[str]:
@@ -151,6 +159,9 @@ STATISTICS = {
         "ans_op_in_question_upd": 0,
         "comment_in_question_upd": 0,
     },
+    "answer": {
+        "comment_in_answer_upd": 0
+    },
     "explanation": {
         "comment_in_exp_upd": 0,
     },
@@ -175,6 +186,8 @@ def check_output(task: str, output: str, inputs: dict) -> dict:
                     STATISTICS[task]["comment_in_question_upd"] += 1
                 elif task == "explanation":
                     STATISTICS[task]["comment_in_exp_upd"] += 1
+                elif task == "answer":
+                    STATISTICS[task]["comment_in_answer_upd"] += 1
                 comment = False # no need to fix anymore
             else:
                 comment = True
@@ -182,6 +195,8 @@ def check_output(task: str, output: str, inputs: dict) -> dict:
                     STATISTICS[task]["comment_in_question_upd"] += comment
                 elif task == "explanation":
                     STATISTICS[task]["comment_in_exp_upd"] += comment
+                elif task == "answer":
+                    STATISTICS[task]["comment_in_answer_upd"] += comment
         else:
             comment = False
 
@@ -231,6 +246,32 @@ def check_output(task: str, output: str, inputs: dict) -> dict:
             "comment_in_question_upd": comment,
         }
 
+    elif task == "answer":
+        answer_options = re.split(r'\n', output)
+        options = ["A", "B", "C", "D"]
+        answer_option_map: dict[str, str | None] = {
+            "opa_upd": None,
+            "opb_upd": None,
+            "opc_upd": None,
+            "opd_upd": None,
+        }
+        if len(answer_options) == 4:
+            for op, ans in zip(options, answer_options):
+                pattern = re.compile(rf"{op}.")
+                if pattern.match(ans.strip()):
+                    answer_option_map[f"op{op.lower()}_upd"] = pattern.sub("", ans, count=1).strip()
+                else:
+                    print(f"Answer option '{op}' is not properly formatted in the output: '{ans.strip()}'")
+                    answer_option_map[f"op{op.lower()}_upd"] = None
+
+        else:
+            print(f"Expected 4 answer options in the output, but got {len(answer_options)}. Output:\n{output}")
+
+        result = {
+            **answer_option_map,
+            "comment_in_answer_upd": comment,
+        }
+
     elif task == "explanation":
         length_diff = len(output) > 100 and check_drastic_length_diff(inputs["explanation"], output)
         result = {
@@ -238,10 +279,12 @@ def check_output(task: str, output: str, inputs: dict) -> dict:
             "length_diff": length_diff,
             "comment_in_exp_upd": comment,
         }
+
     elif task == "classification":
         result = {
             "exp_to_edit": validate_classification_output(output),
         }
+
     else:
         raise ValueError(f"Unknown task: {task}")
 
@@ -262,6 +305,9 @@ def regeneration_needed(task: str, check_result: dict) -> bool:
             check_result["length_diff"] or
             check_result["comment_in_question_upd"]
         )
+    elif task == "answer":
+        all_answers = all([v for k, v in check_result.items() if k.startswith("op")])
+        return not all_answers or check_result["comment_in_answer_upd"]
     elif task == "explanation":
         return check_result["comment_in_exp_upd"]
     elif task == "classification":
@@ -304,9 +350,10 @@ def process_split(
         data_split = [entry for entry in f]
 
     target = {
-        "question": "question_upd",
-        "classification": "exp_to_edit",
-        "explanation": "exp_upd",
+        "question": ["question_upd"],
+        "classification": ["exp_to_edit"],
+        "explanation": ["exp_upd"],
+        "answer": ["opa_upd", "opb_upd", "opc_upd", "opd_upd"],
     }[task]
     cleaned_path_straight = Path(f"{base_dir}/cleaned/{split}_{task}.jsonl")
     cleaned_path_reverse = Path(f"{base_dir}/cleaned/{split}_{task}_reverse.jsonl")
@@ -322,7 +369,7 @@ def process_split(
     for path in all_cleaned_paths:
         if path.exists() and path.stat().st_size > 0:
             with jsonlines.open(path, "r") as existing_f:
-                entries = {e["i"]: e for e in [e for e in existing_f] if target in e}
+                entries = {e["i"]: e for e in [e for e in existing_f] if any([t in e for t in target])}
                 print(f"Found existing cleaned data in {path} with {len(entries)} entries...")
                 existing_entries.update(entries)
                 if "missing" in path.name:
@@ -351,6 +398,7 @@ def process_split(
             filtering_ids = list(map(int, [line for line in f.read().splitlines() if not line.startswith("#") and line.strip()]))
             print(f"Loaded {len(filtering_ids)} IDs for filtering from {path}")
             print(f"Sample empty IDs of length {len(filtering_ids)}:", filtering_ids[:10])
+    filtering_ids = filtering_ids or []
 
     data = data_split[::-1] if reverse else data_split
     data = {e["i"]: e for e in data}
@@ -361,38 +409,49 @@ def process_split(
             if filtering_ids and i not in filtering_ids:
                 continue
 
-            if i in existing_entries and target in existing_entries[i]:
+            if i in existing_entries and all([t in existing_entries[i] for t in target]):
                 already_generated = i in filtering_ids and i in existing_entries_filtered
                 if already_generated or not filtering_ids:
                     print(f"Entry {i} already processed, skipping...")
                     continue
 
-            if "exp" in target and entry["exp"] and not 100 < len(entry["exp"]) < 8000:
+            if task in ["classification", "explanation"] and entry["exp"] and not 100 < len(entry["exp"]) < 8000:
                     print(f"Entry {i} contains an explanation that is too short or long, adding None's and skipping...")
                     data[i]["exp_to_edit"] = None
                     data[i]["exp_upd"] = None
+                    data[i]["comment_in_exp_upd"] = None
                     upd_data_json.write(data[i])
                     continue
 
             if task == "explanation" and not entry.get("exp_to_edit", None):
                 print(f"Entry {i} doesn't require an explanation update, skipping...")
                 data[i]["exp_upd"] = None
+                data[i]["comment_in_exp_upd"] = None
                 upd_data_json.write(data[i])
                 continue
 
             print(f"[{split}] Entry {i}:")
 
             inputs = prepare_entry(entry, task)
-            if "exp" in target and entry["exp"] and not inputs["explanation"]:
+            if task in ["classification", "explanation"] and entry["exp"] and not inputs["explanation"]:
                 raise ValueError("Explanation field is present but empty after preparation:", inputs)
 
-            chat = format_chat(prompt, tokenizer, task=task, **inputs, no_ans_op=True)
+            if task == "answer" and only_option_letters(inputs["answer_options"]):
+                print(f"Entry {i} has answer options that are only letters, which may lead to prompt-leaking. Skipping...")
+                data[i]["opa_upd"] = None
+                data[i]["opb_upd"] = None
+                data[i]["opc_upd"] = None
+                data[i]["opd_upd"] = None
+                data[i]["comment_in_answer_upd"] = False
+                upd_data_json.write(data[i])
+                continue
+
+            chat = format_chat(prompt, tokenizer, task=task, **inputs, no_ans_op=False)
 
             output = None
             iteration = 0
             result_dict = {}
             to_generate = True
-            # print("answer_options (not included in the prompt):", inputs.get("answer_options", "N/A"))
             while (output is None or to_generate) and iteration < 10:
                 iteration += 1
                 print(f"Iteration {iteration}:")
@@ -400,7 +459,7 @@ def process_split(
                 result_dict = check_output(task, output, inputs)
                 print("Check result:", result_dict)
 
-                output = result_dict[target]
+                output = [result_dict[t] for t in target if t in result_dict]
                 print(output, end="\n\n")
 
                 to_generate = regeneration_needed(task, result_dict)

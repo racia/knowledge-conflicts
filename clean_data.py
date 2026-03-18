@@ -23,7 +23,7 @@ def validate_args(args):
         if not path.exists():
             raise SystemExit(f"error: {path} does not exist")
 
-    allowed_tasks = {"question", "explanation", "classification"}
+    allowed_tasks = {"question", "answer", "explanation", "classification"}
     if args.task not in allowed_tasks:
         raise SystemExit(f"Unknown cleaning task: {args.task}, choose from {allowed_tasks}")
 
@@ -79,7 +79,7 @@ def parse_args():
         dest='task',
         type=str,
         required=True,
-        choices=["question", "explanation", "classification"],
+        choices=["question", "answer", "explanation", "classification"],
         help="The cleaning task to perform",
     )
     parser.add_argument(

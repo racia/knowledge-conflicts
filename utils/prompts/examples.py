@@ -98,6 +98,53 @@ def format_question_examples(examples: list[dict], no_ans_op: bool = False) -> l
     ]
 
 
+ANSWER_EXAMPLES = [
+    {
+        "q": "What is the principle of Chinese medicine?",
+        "ans_ops": ["Yang", "Vin", "Both", "None"],
+        "ans_ops_upd": ["Yang", "Yin", "Both", "None"],
+    },
+    {
+        "q": "What visual field defect is typically produced by a temporal lobe tumor?",
+        "ans_ops": ["Crossed upper Quadrantanopia", "Uncrossed upper Quadrantanopia", "crossed lower Quadrantanopia", "Uncrossed lower Quadrantanopia"],
+        "ans_ops_upd": ["Crossed upper quadrantanopia", "Uncrossed upper quadrantanopia", "Crossed lower quadrantanopia", "Uncrossed lower quadrantanopia"],
+    },
+    { # dev 182867
+        "q": "Multiple canals in mandibular premolars are seen in?",
+        "ans_ops": ["Africas", "Caucians", "Not Recalled", "Not Recalled"],
+        "ans_ops_upd": ["Africans", "Caucasians", "Not recalled", "Not recalled"],
+    },
+    { # test 188562
+        "q": "If the dentist concludes you don't have a cavity, when you really have one or more?",
+        "ans_ops": ["Type 2 error", "Type 1 error", "Type 3 error", "one of the above"],
+        "ans_ops_upd": ["Type 2 error", "Type 1 error", "Type 3 error", "one of the above"],
+    },
+    { # test 188729
+        "q": "Which type of ZnPO4 cement is fine-grained, having film thickness of 25 micrometers?",
+        "ans_ops": ["Type 1", "Type 2", "Type 3", "Type 4"],
+        "ans_ops_upd": ["Type 1", "Type 2", "Type 3", "Type 4"],
+    },
+]
+
+
+def wrap_options(ans_ops: list[str]) -> str:
+    """
+    Wrap answer options with their corresponding labels (A, B, C, D).
+    :param ans_ops: A list of answer option strings.
+    :return: A formatted string with each option labeled and separated by newlines.
+    """
+    options = ["A", "B", "C", "D"]
+    return '\n'.join([f"{op}. {ans}" for op, ans in zip(options, ans_ops)])
+
+
+FORMATTED_ANSWER_EXAMPLES = [
+        "Ex {}.\n- INPUT -\nQuestion: {}\nAnswer options:\n{}\n\n- OUTPUT-\n{}\n".format(
+            i, ex["q"], wrap_options(ex["ans_ops"]), wrap_options(ex["ans_ops_upd"])
+        )
+        for i, ex in enumerate(ANSWER_EXAMPLES, 1)
+]
+
+
 EXPLANATION_EXAMPLES = [
     {
         "exp_orig": "Chronic urethral obstruction because of urinary calculi, prostatic hyperophy, tumors, normal pregnancy, tumors, uterine prolapse or functional disorders cause hydronephrosis which by definition is used to describe dilatation of renal pelvis and calculus associated with progressive atrophy of the kidney due to obstruction to the outflow of urine Refer Robbins 7yh/9,1012,9/e. P950",
@@ -125,11 +172,22 @@ FORMATTED_EXPLANATION_EXAMPLES = [
 FORMATTED_EXAMPLES = {
     "question_op_list_disappeared_ids": format_question_examples(QUESTION_OP_LIST_EXAMPLES, no_ans_op=True),
     "question_ans_op_appeared_ids": format_question_examples(ANS_OP_EXAMPLES, no_ans_op=True),
+    "answer": FORMATTED_ANSWER_EXAMPLES,
     "question": format_question_examples(QUESTION_EXAMPLES),
     "explanation": FORMATTED_EXPLANATION_EXAMPLES,
 }
 
 def get_examples_for_task(task: str) -> list:
+    """
+    Retrieve the formatted examples for a given task.
+    The function checks if the task name starts or ends with any of the keys in the
+    FORMATTED_EXAMPLES dictionary and returns the corresponding examples.
+    If no matching examples are found, it returns an empty list.
+    :param task: The name of the task for which to retrieve examples
+                 (e.g., "question", "answer", "explanation").
+    :return: A list of formatted example strings for the specified task,
+             or an empty list if no examples are found.
+    """
     for name, examples in FORMATTED_EXAMPLES.items():
         if task.startswith(name) or task.endswith(name):
             print("Using examples for task:", name)

@@ -5,7 +5,7 @@ from transformers import BitsAndBytesConfig
 from torch.amp import autocast
 import torch
 
-from utils.prompts.examples import get_examples_for_task
+from utils.prompts.examples import get_examples_for_task, wrap_options
 
 
 def load_model_tokenizer(model_name: str) -> tuple:
@@ -131,18 +131,19 @@ def format_chat(system_inputs: dict, tokenizer, **kwargs) -> dict:
                       (optional, influences only "question" task, default: False).
     :return: A list of formatted chat messages.
     """
-    answer_options = "\n- ".join(kwargs.get("answer_options", []))
+    answer_options = wrap_options(kwargs.get("answer_options", []))
     if kwargs.get("no_ans_op"):
         q_beginning = f"Question: {kwargs.get('question', '')}"
     else:
         q_beginning = f"Question: {kwargs.get('question', '')}\nAnswer options:\n{answer_options}"
     task_map = {
         "question": q_beginning + "\nTake a deep breath and return only the formatted question: ",
+        "answer": q_beginning + "\nTake a deep breath and return only the formatted answer options: ",
         "explanation": f"Explanation: {kwargs.get('explanation', '')}" + "\nTake a deep breath and return only the formatted explanation: ",
         "classification": f"Paragraph: {kwargs.get('explanation', '')}" + "\nTake a deep breath and return only 'true' or 'false': ",
     }
     task = task_map[kwargs.get("task")]
-    # print(f"Formatted user message for task '{kwargs.get('task')}':\n——————\n{task}\n———")
+    print(f"Formatted user message for task '{kwargs.get('task')}':\n——————\n{task}\n——————")
     user_inputs = tokenizer.apply_chat_template(
         [{"role": "user", "content": task}],
         add_generation_prompt=True,
