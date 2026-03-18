@@ -255,6 +255,11 @@ def main():
     # Set the verbosity to info of the Transformers logger (on main process only):
     logger.info(f"Training/evaluation parameters {training_args}")
 
+    ### delete the prev saved model
+    if os.path.exists(training_args.output_dir):
+        import shutil
+        shutil.rmtree(training_args.output_dir)
+
     # Detecting last checkpoint.
     last_checkpoint = None
     if os.path.isdir(training_args.output_dir) and training_args.do_train and not training_args.overwrite_output_dir:
@@ -579,7 +584,14 @@ def main():
                     corr += 1
                 total += 1
 
-            return {'masked_acc': corr / total}
+            # Initialize eval class
+            qa = EvalQA(test_path='test.json', tokenizer=trainer.tokenizer)
+
+            d = qa.on_epoch_end(trainer.model)
+
+            return {'masked_acc': corr / total, 'P-micro': d['P-micro'], 'R-micro': d['R-micro'],
+                    'F1-micro': d['F1-micro'],
+                    'P-macro': d['P-macro'], 'R-macro': d['R-macro'], 'F1-macro': d['F1-macro'], 'Acc': d['Acc']}
 
     # Data collator
     # This one will take care of randomly masking the tokens.
@@ -589,9 +601,6 @@ def main():
         mlm_probability=data_args.mlm_probability,
         pad_to_multiple_of=8 if pad_to_multiple_of_8 else None,
     )
-
-    # Initialize Callback
-    qa_callback = EvalQA(test_path='test.json', tokenizer=tokenizer)
 
     # Initialize our Trainer
     trainer = Trainer(
@@ -605,10 +614,7 @@ def main():
         preprocess_logits_for_metrics=preprocess_logits_for_metrics
         if training_args.do_eval and not is_torch_xla_available()
         else None,
-        callbacks=[qa_callback]
     )
-
-    qa_callback.trainer = trainer
 
     # Training
     if training_args.do_train:
@@ -632,7 +638,7 @@ def main():
 
     # Evaluation
     if training_args.do_eval:
-        logger.info("*** Evaluate ***")
+        logger.info("*** Evaluate MLM and QA ***")
 
         metrics = trainer.evaluate()
 

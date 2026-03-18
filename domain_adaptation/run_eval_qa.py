@@ -3,10 +3,10 @@ from string import Template
 import numpy as np
 import torch
 from tqdm import tqdm
+import random
 from collections import Counter
 import torch.nn.functional as F
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score, classification_report
-from transformers import TrainerCallback, TrainingArguments, TrainerState, TrainerControl
 
 
 def score_choice(choice, model, tokenizer):
@@ -65,22 +65,20 @@ def score_choice(choice, model, tokenizer):
         return logprob, np.exp(logprob)
 
 
-class EvalQA(TrainerCallback):
+class EvalQA(object):
     def __init__(self, test_path, tokenizer):
-        super().__init__()
         self.trainer = None
         self.tokenizer = tokenizer
 
         with open(test_path, 'r') as f:
             self.test_data = json.load(f)
 
-
-    def on_epoch_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, model=None, **kwargs):
-        model.eval()
+    def on_epoch_end(self, model):
 
         prompt_template = Template('$question <sep> $answer')
         Y, Y_hat = [], []
-        for test_example in tqdm(self.test_data[: 10], desc='eval on test data'):
+        test_data_sample = random.sample(self.test_data, 300)
+        for test_example in tqdm(test_data_sample, desc='eval as QA'):
             choices = [
                 prompt_template.substitute(question=test_example['question'], answer=test_example[f'op{clet}']) for
                 clet
@@ -118,8 +116,7 @@ class EvalQA(TrainerCallback):
 
         print(report)
 
-        self.trainer.log(
-            {'P-micro': p_micro, 'R-micro': r_micro, 'F1-micro': f1_micro, 'P-macro': p_macro, 'r-macro': r_macro,
-             'F1-macro': f1_macro, 'Acc': acc})
+        d = {'P-micro': p_micro, 'R-micro': r_micro, 'F1-micro': f1_micro, 'P-macro': p_macro, 'R-macro': r_macro,
+             'F1-macro': f1_macro, 'Acc': acc}
 
-        return control
+        return d
