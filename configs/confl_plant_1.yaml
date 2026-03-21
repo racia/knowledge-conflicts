@@ -3,12 +3,9 @@ model:
 
 data:
   path: "data/MedMCQA"
-  source: "cleaned"
-  splits: ["dev"] #, "validation", "test"]  
-  num_parts: 4
-  part_idx: 1
-  num_samples: -1 # -1 for all samples, otherwise specify the number of samples to use from the split
-
+  num_parts: 4 # Amounts to 45707 samples per part
+  part_idx: 4
+  num_samples: 290 # -1 for all samples, otherwise specify the number of samples to use from the split
 
 task:
   name: "conflict_planting"
