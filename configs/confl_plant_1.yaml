@@ -1,0 +1,24 @@
+model: 
+  name: "meta-llama/Meta-Llama-3-8B-Instruct"
+
+data:
+  path: "data/MedMCQA"
+  source: "cleaned"
+  splits: ["dev"] #, "validation", "test"]  
+  num_parts: 4
+  part_idx: 1
+  num_samples: -1 # -1 for all samples, otherwise specify the number of samples to use from the split
+
+
+task:
+  name: "conflict_planting"
+  prompt: "utils/prompts/conflict_planting.txt"
+
+planting:
+  exp_only: true
+  overwrite: true
+  allow_inv_mod_answ: true
+  allow_id_mod_answ: false
+  save_mod_questions: false
+  save_mod_answers: true
+  save_mod_explanations: true
