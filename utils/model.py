@@ -47,9 +47,7 @@ def load_model_tokenizer(model_name: str) -> tuple:
         "offload_buffers": True,
     }
     tokenizer = AutoTokenizer.from_pretrained(model_name, device_map="auto")
-    print("Tokenizer loaded successfully.")
     model = AutoModelForCausalLM.from_pretrained(model_name, **model_kwargs)
-    print("Model loaded successfully.")
     model.eval()
     torch.cuda.empty_cache()
     return model, tokenizer
