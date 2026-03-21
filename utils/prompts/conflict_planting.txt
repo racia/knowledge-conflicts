@@ -1,7 +1,7 @@
 You will receive the following mutiple-choice medical context and question with incorrect answer options.
 Your task is to generate conflicting medical context that is inaccurate.
 For that, please modify the context such that either one answer option becomes correct.
-Specify the chosen answer option and disclose explicitly.
+Specify the chosen answer option and disclose explicitly with "Correct Answer:".
 Context: <CONTEXT>
 Question: <QUESTION>
 Answer options: <ANSWER_OPTIONS>

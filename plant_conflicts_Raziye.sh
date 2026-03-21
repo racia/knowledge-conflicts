@@ -3,10 +3,11 @@
 #SBATCH --job-name=plant_q
 #SBATCH --output=planting_q_out
 #SBATCH --error=planting_q_err
-#SBATCH --partition=students
+# SBATCH --partition=students
 #SBATCH --ntasks=1
+#SBATCH --time=00:29:00
 #SBATCH --cpus-per-task=4
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:2
 # SBATCH --nodelist=gpu09
 # SBATCH --mem-per-gpu=10G
 #SBATCH --mem=24G
@@ -28,15 +29,15 @@ esac
 
 source ~/.bashrc 2>/dev/null
 echo "Activating conda env..."
-conda activate kc
+conda activate kc1
 
 export CUDA_VISIBLE_DEVICES=${SLURM_JOB_GPUS:-}
 export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,expandable_segments:True"
 
 SCRIPT="conflict_planting.py"
 
-splits=(dev)  # possible values: dev, test, train
-source="original/clean_spaces_id" # classical: "original/clean_spaces_id", for explanations: "cleaned"
+splits=(train)  # possible values: dev, test, train
+source="cleaned" # classical: "original/clean_spaces_id", for explanations: "cleaned"
 
 declare -a CONFIGS=("$PWD/configs/confl_plant_1.yaml")
 #task="question"  # question, classification, explanation
