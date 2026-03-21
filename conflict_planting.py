@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 import re
 from omegaconf import DictConfig, OmegaConf
-import warnings
+
 from utils.model import _concat_token_blocks, generate_text, load_model_tokenizer
 
 
