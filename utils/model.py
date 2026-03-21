@@ -38,13 +38,13 @@ def load_model_tokenizer(model_name: str) -> tuple:
     )
     model_kwargs = {
         "device_map": "auto",
-        "torch_dtype": torch.bfloat16,
-        #"quantization_config": quantization_config,
+        "dtype": torch.bfloat16,
+        "quantization_config": quantization_config,
         "attn_implementation": "eager",
-        #"low_cpu_mem_usage": True,
-        #"offload_folder": "offload_folder",
-        #"offload_state_dict": True,
-        #"offload_buffers": True,
+        "low_cpu_mem_usage": True,
+        "offload_folder": "offload_folder",
+        "offload_state_dict": True,
+        "offload_buffers": True,
     }
     tokenizer = AutoTokenizer.from_pretrained(model_name, device_map="auto")
     print("Tokenizer loaded successfully.")
