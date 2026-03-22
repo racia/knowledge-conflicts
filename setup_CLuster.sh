@@ -1,15 +1,18 @@
 # conda remove -n kc --all
 
-conda create --name kc python=3.11.9
+conda create --name kc python=3.11.9 -y
 
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate kc
 
-conda install nvidia::cuda==12.8 # not necessary if you have the correct Nvidia drivers installed, but it ensures that the correct CUDA version is available in the environment
-pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu128
-#this version for GTX 1080 Ti Nvidia drivers supports sm_50 sm_60 sm_61 sm_70 sm_75 sm_80 ...
-pip3 install accelerate omegaconf
+pip3 install torch==2.1.2 --index-url https://download.pytorch.org/whl/cu121
 
-conda install jupyter notebook -c conda-forge
-conda install jsonlines transformers
+# Core libraries
+pip install transformers==4.38.2
+pip install accelerate omegaconf jsonlines safetensors
 
+# Quantization and memory optimization
+pip3 install bitsandbytes==0.42.0
+
+# Optional: Jupyter (via conda)
+# conda install jupyter notebook -c conda-forge

@@ -148,12 +148,17 @@ def parse_args():
     return parser.parse_args()
 
 
-def save_generated_data(split: str, generated_data: list[dict], cfg: DictConfig):
+def save_generated_data(split: str, data_dict: dict, cfg: DictConfig):
+    """
+    Save the generated data with conflict-planted contexts and corresponding question-answer pairs to a JSONL file.
+    :param split: The data split (e.g., "train", "dev", "test")
+    :param data_dict: A dict containing the generated data to be saved.
+    :param cfg: The configuration object containing the data path for saving the generated data.
+    """
     output_file = Path(cfg.data.path) / "synthetic" / f"{split}_conflict_planted.jsonl"
-    with open(output_file, "w") as f:
-        for item in generated_data:
-            f.write(json.dumps(item) + "\n")
-    print(f"Saved generated data to {output_file}")
+    with open(output_file, "a") as f:
+        f.write(json.dumps(data_dict) + "\n")
+    #print(f"Saved generated data to {output_file}")
 
 
 def retrieve_answer_from_raw(cop: int, mod_answer: str, answer_options: dict) -> str:
@@ -240,7 +245,7 @@ if __name__ == "__main__":
 
     for split in args.splits:
         print(f"Processing {split} split of {args.source} data from {conf.data.path}...")
-        data_file = Path(conf.data.path) / args.source / f"{split}_exp_unfinished_q_leaked.jsonl"
+        data_file = Path(conf.data.path) / args.source / f"{split}.jsonl"
         data_part = partition_data(data_file, num_parts=conf.data.num_parts, part_idx=conf.data.part_idx)
         data_portion = data_part[:conf.data.num_samples] if conf.data.num_samples > 0 else data_part
         print(f"Processing {len(data_portion)} of {len(data_part)} instances in the partitioned data.")
@@ -306,6 +311,10 @@ if __name__ == "__main__":
                 **parsed_data,
                 "cop_upd": cop_upd+1 if cop_upd is not None else None, # Adjust back to 1-based index for output
                 })
+            count+=1
+            # Save directly after processing each question to avoid data loss in case of interruptions, and to monitor progress on larger datasets
+            save_generated_data(split, {**question_data, **parsed_data, "cop_upd": cop_upd+1 if cop_upd is not None else None}, conf)
+
         # Save statistics        
         print(f"Statistics for split {split}:")
         print(f"Total questions processed: {i+1}")
@@ -319,4 +328,4 @@ if __name__ == "__main__":
         print(f"Total questions with same updated answer as original: {same_upd_answer_cnt}")
 
         save_generated_data(split, generated_data, conf)
-    
+        print(f"Processed and saved {len(generated_data)} total questions with updated and (valid) answers.")    

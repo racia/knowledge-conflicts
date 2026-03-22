@@ -5,7 +5,7 @@
 #SBATCH --error=planting_q_err
 #SBATCH --partition=students
 #SBATCH --ntasks=1
-#SBATCH --time=05:00:00
+#SBATCH --time=04:00:00
 # SBATCH --cpus-per-task=4
 #SBATCH --gres=gpu:2
 # SBATCH --nodelist=gpu09
@@ -40,7 +40,7 @@ SCRIPT="conflict_planting.py"
 splits=(train)  # possible values: dev, test, train
 source="cleaned" # classical: "original/clean_spaces_id", for explanations: "cleaned"
 
-declare -a CONFIGS=("$PWD/configs/confl_plant_4.yaml")
+declare -a CONFIGS=("$PWD/configs/confl_plant_1.yaml")
 #task="question"  # question, classification, explanation
 
 echo "Running conflict planting with the following configurations: ${CONFIGS[*]}"

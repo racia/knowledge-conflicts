@@ -29,7 +29,7 @@ esac
 
 source ~/.bashrc 2>/dev/null
 echo "Activating conda env..."
-conda activate kc1
+conda activate kc
 
 export CUDA_VISIBLE_DEVICES=${SLURM_JOB_GPUS:-}
 export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,expandable_segments:True"

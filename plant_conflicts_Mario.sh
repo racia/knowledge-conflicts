@@ -40,7 +40,7 @@ SCRIPT="conflict_planting.py"
 splits=(train)  # possible values: dev, test, train
 source="cleaned" # classical: "original/clean_spaces_id", for explanations: "cleaned"
 
-declare -a CONFIGS=("$PWD/configs/confl_plant_4.yaml")
+declare -a CONFIGS=("$PWD/configs/confl_plant_3.yaml")
 #task="question"  # question, classification, explanation
 
 echo "Running conflict planting with the following configurations: ${CONFIGS[*]}"
