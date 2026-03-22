@@ -409,6 +409,10 @@ def process_split(
             if filtering_ids and i not in filtering_ids:
                 continue
 
+            if i == 79613:
+                print("CUDA out of memory issue with entry 79613, skipping:", entry)
+                continue
+
             if i in existing_entries and all([t in existing_entries[i] for t in target]):
                 already_generated = i in filtering_ids and i in existing_entries_filtered
                 if already_generated or not filtering_ids:

@@ -7,8 +7,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --gres=gpu:1
-# SBATCH --nodelist=gpu08
-# SBATCH --mem-per-gpu=10G
+#SBATCH --nodelist=gpu09
+# SBATCH --mem-per-gpu=16G
 #SBATCH --mem=24G
 #SBATCH --mail-user=ivakhnenko@cl.uni-heidelberg.de
 #SBATCH --mail-type=ALL
@@ -34,7 +34,7 @@ export CUDA_VISIBLE_DEVICES=${SLURM_JOB_GPUS:-}
 export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,expandable_segments:True"
 
 source="original/clean_spaces_id" # classical: "original/clean_spaces_id", for explanations: "cleaned"
-splits=(test train)  # possible values: dev, test, train
+splits=(train)  # possible values: dev, test, train
 task="answer"  # question, answer, classification, explanation
 # reverse (influences whether the list of data items is reversed or not)
 #filtering_ids=op_list_disappeared_ids
