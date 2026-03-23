@@ -1,21 +1,21 @@
 CUDA_VISIBLE_DEVICES=0 python3 run_mlm.py \
     --model_name_or_path google/bigbird-roberta-base \
     --mlm_probability 0.15 \
-    --train_file train.csv \
+    --train_file dev.csv \
     --validation_file dev.csv \
     --output_dir model_hub/bigbird-roberta-base \
-    --learning_rate 3e-5 \
+    --learning_rate 5e-5 \
     --warmup_ratio 0.05 \
     --weight_decay 0.01 \
     --max_grad_norm 1.0 \
      --max_seq_length 2048 \
       --num_train_epochs 5 \
-      --dataloader_num_workers 1 \
+      --dataloader_num_workers 4 \
        --per_device_train_batch_size 8 \
        --per_device_eval_batch_size 4 \
-       --gradient_accumulation_steps 1 \
+       --gradient_accumulation_steps 2 \
          --save_strategy "epoch" \
-         --logging_steps 100 \
+         --logging_steps 500 \
          --seed 42 \
            --evaluation_strategy "epoch" \
            --do_train=True \

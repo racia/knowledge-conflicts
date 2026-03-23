@@ -26,7 +26,7 @@ from transformers import (
 )
 from transformers.trainer_utils import get_last_checkpoint
 
-from run_eval_qa import EvalQA
+from run_eval_qa import EvalQA, SaveMetricsPerEpoch
 
 logger = logging.getLogger(__name__)
 MODEL_CONFIG_CLASSES = list(MODEL_FOR_MASKED_LM_MAPPING.keys())
@@ -452,7 +452,7 @@ def main():
         def tokenize_function(examples):
             # Remove empty lines
             examples[text_column_name] = [
-                line for line in examples[text_column_name] if len(line) > 0 and not line.isspace()
+                line for line in examples[text_column_name] if line is not None and len(line) > 0 and not line.isspace()
             ]
             return tokenizer(
                 examples[text_column_name],
@@ -485,7 +485,11 @@ def main():
         # We use `return_special_tokens_mask=True` because DataCollatorForLanguageModeling (see below) is more
         # efficient when it receives the `special_tokens_mask`.
         def tokenize_function(examples):
-            return tokenizer(examples[text_column_name], return_special_tokens_mask=True)
+            texts = [
+                t if t is not None else ""  # replace None with empty string
+                for t in examples[text_column_name]
+            ]
+            return tokenizer(texts, return_special_tokens_mask=True)
 
         with training_args.main_process_first(desc="dataset map tokenization"):
             if not data_args.streaming:
@@ -589,9 +593,12 @@ def main():
 
             d = qa.on_epoch_end(trainer.model)
 
-            return {'masked_acc': corr / total, 'P-micro': d['P-micro'], 'R-micro': d['R-micro'],
-                    'F1-micro': d['F1-micro'],
-                    'P-macro': d['P-macro'], 'R-macro': d['R-macro'], 'F1-macro': d['F1-macro'], 'Acc': d['Acc']}
+            epoch_metrics = {'masked_acc': corr / total, 'P-micro': d['P-micro'], 'R-micro': d['R-micro'],
+                             'F1-micro': d['F1-micro'],
+                             'P-macro': d['P-macro'], 'R-macro': d['R-macro'], 'F1-macro': d['F1-macro'],
+                             'Acc': d['Acc']}
+
+            return epoch_metrics
 
     # Data collator
     # This one will take care of randomly masking the tokens.
@@ -614,6 +621,8 @@ def main():
         preprocess_logits_for_metrics=preprocess_logits_for_metrics
         if training_args.do_eval and not is_torch_xla_available()
         else None,
+        # Initialize the Metrics Callback
+        callbacks=[SaveMetricsPerEpoch()]
     )
 
     # Training

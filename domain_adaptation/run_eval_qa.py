@@ -7,6 +7,24 @@ import random
 from collections import Counter
 import torch.nn.functional as F
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score, classification_report
+from transformers import TrainerCallback
+
+from transformers import TrainerCallback
+import json
+import csv
+import os
+
+
+class SaveMetricsPerEpoch(TrainerCallback):
+
+    def on_evaluate(self, args, state, control, metrics=None, **kwargs):
+        epoch_num = int(state.epoch)
+        json_path = os.path.join(args.output_dir, f"metrics_epoch_{epoch_num}.json")
+
+        with open(json_path, "w") as f:
+            json.dump(metrics, f, indent=4)
+
+        print(f"Epoch {epoch_num}, Saved metrics to {json_path}")
 
 
 def score_choice(choice, model, tokenizer):
@@ -77,8 +95,10 @@ class EvalQA(object):
 
         prompt_template = Template('$question <sep> $answer')
         Y, Y_hat = [], []
-        test_data_sample = random.sample(self.test_data, 300)
-        for test_example in tqdm(test_data_sample, desc='eval as QA'):
+        ## this can also be random, but then is harder to assess whether its effective
+        test_data_sample = self.test_data[: 500]
+        print(f"\n\n*** Evaluate QA ***\nNum Questions : {len(test_data_sample)}\n\n")
+        for test_example in test_data_sample:
             choices = [
                 prompt_template.substitute(question=test_example['question'], answer=test_example[f'op{clet}']) for
                 clet
