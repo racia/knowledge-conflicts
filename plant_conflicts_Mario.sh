@@ -5,7 +5,7 @@
 #SBATCH --error=planting_q_err
 #SBATCH --partition=students
 #SBATCH --ntasks=1
-#SBATCH --time=05:00:00
+#SBATCH --time=08:00:00
 # SBATCH --cpus-per-task=4
 #SBATCH --gres=gpu:2
 # SBATCH --nodelist=gpu09

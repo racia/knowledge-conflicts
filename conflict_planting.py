@@ -155,7 +155,7 @@ def save_generated_data(split: str, data_dict: dict, cfg: DictConfig):
     :param data_dict: A dict containing the generated data to be saved.
     :param cfg: The configuration object containing the data path for saving the generated data.
     """
-    output_file = Path(cfg.data.path) / "synthetic" / f"{split}_conflict_planted.jsonl"
+    output_file = Path(cfg.data.path) / "synthetic" / f"{split}_conflict_planted_{cfg.data.part_idx}.jsonl"
     with open(output_file, "a") as f:
         f.write(json.dumps(data_dict) + "\n")
     #print(f"Saved generated data to {output_file}")
@@ -214,7 +214,7 @@ def partition_data(data_file: Path, num_parts: int, part_idx: int) -> list[str]:
         return data_lines
     part_size = len(data_lines) // num_parts
     start_idx = part_size * (part_idx - 1)
-    end_idx = start_idx + part_size if part_idx < num_parts -1 else len(data_lines)
+    end_idx = start_idx + part_size if part_idx < num_parts else len(data_lines)
     return data_lines[start_idx:end_idx]
 
 
@@ -245,9 +245,11 @@ if __name__ == "__main__":
 
     for split in args.splits:
         print(f"Processing {split} split of {args.source} data from {conf.data.path}...")
-        data_file = Path(conf.data.path) / args.source / f"{split}.jsonl"
+        data_file = Path(conf.data.path) / args.source / f"{split}_exp_que_upd.jsonl"
         data_part = partition_data(data_file, num_parts=conf.data.num_parts, part_idx=conf.data.part_idx)
         data_portion = data_part[:conf.data.num_samples] if conf.data.num_samples > 0 else data_part
+        if conf.data.part_idx == 2:
+            data_portion = data_part[1877:conf.data.num_samples] if conf.data.num_samples > 0 else data_part[1877:]
         print(f"Processing {len(data_portion)} of {len(data_part)} instances in the partitioned data.")
         
         generated_data = []
@@ -327,5 +329,5 @@ if __name__ == "__main__":
         print(f"Total questions with invalid updated answer parsed from model output: {invalid_upd_answer_cnt}")
         print(f"Total questions with same updated answer as original: {same_upd_answer_cnt}")
 
-        save_generated_data(split, generated_data, conf)
+        #save_generated_data(split, generated_data, conf)
         print(f"Processed and saved {len(generated_data)} total questions with updated and (valid) answers.")    

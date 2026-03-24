@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #
 #SBATCH --job-name=plant_q
-#SBATCH --output=planting_q_out
-#SBATCH --error=planting_q_err
+#SBATCH --output=planting_q_out_D
+#SBATCH --error=planting_q_err_D
 #SBATCH --partition=students
 #SBATCH --ntasks=1
-#SBATCH --time=05:00:00
-# SBATCH --cpus-per-task=4
+# SBATCH --time=08:00:00
+#SBATCH --cpus-per-task=4
 #SBATCH --gres=gpu:2
 # SBATCH --nodelist=gpu09
 # SBATCH --mem-per-gpu=10G
