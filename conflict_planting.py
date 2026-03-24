@@ -217,6 +217,24 @@ def partition_data(data_file: Path, num_parts: int, part_idx: int) -> list[str]:
     end_idx = start_idx + part_size if part_idx < num_parts else len(data_lines)
     return data_lines[start_idx:end_idx]
 
+def check_existing_generated_data(split: str, cfg: DictConfig, data_part: list) -> int:
+    """
+    Check for existing generated data for the given split and return the count of already processed instances.
+    :param split: The data split (e.g., "train", "dev", "test") to check for existing generated data.
+    :param cfg: The configuration object containing the data path for checking existing generated data.
+    :param data_part: The portion of the data file being processed.
+    :return: The count of already processed instances based on existing generated data files.
+    """
+    output_file = Path(cfg.data.path) / "synthetic" / f"{split}_conflict_planted_{cfg.data.part_idx}.jsonl"
+    if output_file.exists():
+        with open(output_file, "r") as json_f:
+            existing_data = [json.loads(line) for line in json_f]
+        last_processed_id = existing_data[-1].get("id", "N/A") if existing_data else "N/A"
+        processed_count = data_part.index(next((line for line in data_part if json.loads(line).get("id", "") == last_processed_id), None)) + 1 if last_processed_id != "N/A" else 0
+        print(f"Existing generated data found for split {split}. Last processed question ID: {last_processed_id}. Resuming from the next instance.")
+        return processed_count
+    return 0
+
 
 if __name__ == "__main__":
     args = parse_args()
@@ -247,9 +265,8 @@ if __name__ == "__main__":
         print(f"Processing {split} split of {args.source} data from {conf.data.path}...")
         data_file = Path(conf.data.path) / args.source / f"{split}_exp_que_upd.jsonl"
         data_part = partition_data(data_file, num_parts=conf.data.num_parts, part_idx=conf.data.part_idx)
-        data_portion = data_part[:conf.data.num_samples] if conf.data.num_samples > 0 else data_part
-        if conf.data.part_idx == 2:
-            data_portion = data_part[1877:conf.data.num_samples] if conf.data.num_samples > 0 else data_part[1877:]
+        processed_count = check_existing_generated_data(split, conf, data_part)
+        data_portion = data_part[processed_count:conf.data.num_samples] if conf.data.num_samples > 0 else data_part[processed_count:]
         print(f"Processing {len(data_portion)} of {len(data_part)} instances in the partitioned data.")
         
         generated_data = []

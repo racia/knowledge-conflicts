@@ -3,8 +3,8 @@
 
 # Ignore error/output files
 *_out.txt
-*_out
-*_err
+*_out*
+*_err*
 
 # Ignore VS Code settings
 .vscode/
