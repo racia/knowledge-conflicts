@@ -1,17 +1,16 @@
 #!/usr/bin/env bash
 #
-#SBATCH --job-name=plant_q
-#SBATCH --output=planting_q_out
-#SBATCH --error=planting_q_err
+#SBATCH --job-name=plant
+#SBATCH --output=planting_out
+#SBATCH --error=planting_err
 #SBATCH --partition=students
 #SBATCH --ntasks=1
-#SBATCH --time=04:00:00
 # SBATCH --cpus-per-task=4
 #SBATCH --gres=gpu:2
-# SBATCH --nodelist=gpu09
+#SBATCH --nodelist=gpu08
 # SBATCH --mem-per-gpu=10G
-#SBATCH --mem=64G
-#SBATCH --mail-user=sari@cl.uni-heidelberg.de
+#SBATCH --mem=32G
+#SBATCH --mail-user=ivakhnenko@cl.uni-heidelberg.de
 #SBATCH --mail-type=ALL
 
 # JOB STEPS
@@ -28,17 +27,16 @@ case "$PWD" in
 esac
 
 source ~/.bashrc 2>/dev/null
-echo "Activating conda env..."
-
 
 export CUDA_VISIBLE_DEVICES=${SLURM_JOB_GPUS:-}
 export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,expandable_segments:True"
 
-conda activate kc
+echo "Activating conda env kc1..."
+conda activate kc1
 SCRIPT="conflict_planting.py"
 
 splits=(train)  # possible values: dev, test, train
-source="cleaned" # classical: "original/clean_spaces_id", for explanations: "cleaned"
+source="cleaned/final" # classical: "original/clean_spaces_id", for explanations: "cleaned"
 
 declare -a CONFIGS=("$PWD/configs/confl_plant_1.yaml")
 #task="question"  # question, classification, explanation
