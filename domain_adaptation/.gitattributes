@@ -1,3 +1,0 @@
-raw_baseline_data/train.jsonl filter=lfs diff=lfs merge=lfs -text
-baseline_data/train.csv filter=lfs diff=lfs merge=lfs -text
-conflicting_data/train-conflicts.csv filter=lfs diff=lfs merge=lfs -text
