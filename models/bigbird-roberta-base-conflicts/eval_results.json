@@ -1,0 +1,17 @@
+{
+    "epoch": 7.964200477326969,
+    "eval_Acc": 0.292,
+    "eval_F1-macro": 0.29032156368221945,
+    "eval_F1-micro": 0.292,
+    "eval_P-macro": 0.2911533899027524,
+    "eval_P-micro": 0.292,
+    "eval_R-macro": 0.29395495439522007,
+    "eval_R-micro": 0.292,
+    "eval_loss": 1.692482352256775,
+    "eval_masked_acc": 0.6824902877983033,
+    "eval_runtime": 44.8086,
+    "eval_samples": 126,
+    "eval_samples_per_second": 2.812,
+    "eval_steps_per_second": 1.406,
+    "perplexity": 5.4329504767322945
+}
