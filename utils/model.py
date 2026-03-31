@@ -4,9 +4,11 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers import BitsAndBytesConfig
 from torch.amp import autocast
 import torch
-
+import logging
 from utils.prompts.examples import get_examples_for_task, wrap_options
 
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def load_model_tokenizer(model_name: str) -> tuple:
     """
@@ -24,6 +26,7 @@ def load_model_tokenizer(model_name: str) -> tuple:
     available_models = (
         "meta-llama/Meta-Llama-3-8B-Instruct",
         "meta-llama/Llama-3.3-70B-Instruct",
+        "gemini-2.5-flash-lite",
     )
     if model_name not in available_models:
         raise ValueError(f"Model '{model_name}' is not supported. Available models: {available_models}")
@@ -45,10 +48,22 @@ def load_model_tokenizer(model_name: str) -> tuple:
         "offload_state_dict": True,
         "offload_buffers": True,
     }
+
+    torch.cuda.empty_cache() # Clear GPU memory before loading the model to ensure maximum available memory for the model loading process
     tokenizer = AutoTokenizer.from_pretrained(model_name, device_map="auto")
     model = AutoModelForCausalLM.from_pretrained(model_name, **model_kwargs)
     model.eval()
-    torch.cuda.empty_cache()
+
+    # Add memory tracking
+    if torch.cuda.is_available():
+        logging.info("GPU Memory Summary after model load:")
+        for i in range(torch.cuda.device_count()):
+            torch.cuda.set_device(i)
+            logging.info(f"Device {i} ({torch.cuda.get_device_name(i)}):\n{torch.cuda.memory_summary(device=i)}")
+    else:
+        logging.info("CUDA not available; running on CPU.")
+
+
     return model, tokenizer
 
 

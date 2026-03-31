@@ -1,15 +1,18 @@
 # conda remove -n kc --all
 
-conda create --name kc1 python=3.11.9
+conda create --name kc python=3.11.9 -y
 
 source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate kc1
+conda activate kc
 
-conda install nvidia::cuda==12.6.0
-pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu126
-pip3 install accelerate
+pip3 install torch==2.1.2 --index-url https://download.pytorch.org/whl/cu121
 
-conda install jupyter notebook -c conda-forge
+# Core libraries
+pip install transformers==4.38.2
+pip install accelerate omegaconf jsonlines safetensors
 
-conda install jsonlines transformers accelerate bitsandbytes>=0.46.1
+# Quantization and memory optimization
+pip3 install bitsandbytes==0.42.0
 
+# Optional: Jupyter (via conda)
+# conda install jupyter notebook -c conda-forge
