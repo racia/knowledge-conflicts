@@ -80,7 +80,7 @@ these for actual use.
 
 ### Overview
 
-* Model -`model_id=google/bigbird-roberta-base`
+* Model `model_id=google/bigbird-roberta-base`
 
 * Our method uses the transformers library from Hugging Face to fine-tune a MLM head on the target MedMCQA domain, with
   respect to the different context types.
