@@ -25,6 +25,7 @@ from transformers import (
     set_seed,
 )
 from transformers.trainer_utils import get_last_checkpoint
+from transformers.utils.versions import require_version
 
 from run_eval_qa import EvalQA, SaveMetricsPerEpoch
 
@@ -589,7 +590,7 @@ def main():
                 total += 1
 
             # Initialize eval class
-            qa = EvalQA(test_path='test.json', tokenizer=trainer.tokenizer)
+            qa = EvalQA(test_path='new_data/test.json', tokenizer=trainer.tokenizer)
 
             d = qa.on_epoch_end(trainer.model)
 

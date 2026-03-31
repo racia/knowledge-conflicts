@@ -105,11 +105,9 @@ class EvalQA(object):
                 in ['a', 'b', 'c', 'd']]
 
             cop = test_example['cop']
-            # print(f'gold answer: {cop}')
             max_prob, ans = float('-inf'), None
             for cop_idx in range(len(choices)):
                 logs, _ = score_choice(choices[cop_idx], model, self.tokenizer)
-                # print(f'cop{cop_idx + 1}: {logs}')
                 if max_prob < logs:
                     max_prob = logs
                     ans = cop_idx + 1
