@@ -1,0 +1,21 @@
+model: 
+  name: "meta-llama/Meta-Llama-3-8B-Instruct"
+
+data:
+  path: "data/MedMCQA"
+  num_parts: 4 # Number of data partitions, which amounts to 45707 samples per partition for train split.
+  part_idx: 3
+  num_samples: 4000 # -1 for all samples, otherwise specify the number of samples to use from the partition
+
+task:
+  name: "conflict_planting"
+  prompt: "utils/prompts/conflict_planting.txt"
+
+planting: # Currently not used, but can be used to specify planting settings for different runs
+  exp_only: true
+  overwrite: true
+  allow_inv_mod_answ: true
+  allow_id_mod_answ: false
+  save_mod_questions: false
+  save_mod_answers: true
+  save_mod_explanations: true
