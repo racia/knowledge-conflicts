@@ -1,0 +1,86 @@
+{
+  "Surgery": {
+    "Acc": 0.2577,
+    "Support": 1389
+  },
+  "Physiology": {
+    "Acc": 0.2205,
+    "Support": 712
+  },
+  "Social & Preventive Medicine": {
+    "Acc": 0.2307,
+    "Support": 1049
+  },
+  "Anaesthesia": {
+    "Acc": 0.2517,
+    "Support": 298
+  },
+  "Psychiatry": {
+    "Acc": 0.2603,
+    "Support": 411
+  },
+  "Microbiology": {
+    "Acc": 0.2293,
+    "Support": 942
+  },
+  "Anatomy": {
+    "Acc": 0.208,
+    "Support": 976
+  },
+  "Orthopaedics": {
+    "Acc": 0.1879,
+    "Support": 314
+  },
+  "Gynaecology & Obstetrics": {
+    "Acc": 0.2341,
+    "Support": 944
+  },
+  "Pediatrics": {
+    "Acc": 0.2698,
+    "Support": 734
+  },
+  "Biochemistry": {
+    "Acc": 0.2303,
+    "Support": 621
+  },
+  "Ophthalmology": {
+    "Acc": 0.2792,
+    "Support": 530
+  },
+  "Forensic Medicine": {
+    "Acc": 0.2626,
+    "Support": 495
+  },
+  "Pathology": {
+    "Acc": 0.2603,
+    "Support": 1018
+  },
+  "Pharmacology": {
+    "Acc": 0.2244,
+    "Support": 1261
+  },
+  "Medicine": {
+    "Acc": 0.2271,
+    "Support": 1497
+  },
+  "Radiology": {
+    "Acc": 0.2125,
+    "Support": 320
+  },
+  "ENT": {
+    "Acc": 0.2687,
+    "Support": 387
+  },
+  "Skin": {
+    "Acc": 0.224,
+    "Support": 192
+  },
+  "Unknown": {
+    "Acc": 0.232,
+    "Support": 306
+  },
+  "Dental": {
+    "Acc": 0.2708,
+    "Support": 144
+  }
+}
