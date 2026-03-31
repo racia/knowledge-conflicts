@@ -3,6 +3,8 @@ import json
 import os
 from pathlib import Path
 import re
+
+from jsonlines import jsonlines
 from omegaconf import DictConfig, OmegaConf
 
 from utils.model import _concat_token_blocks, generate_text, load_model_tokenizer
@@ -156,9 +158,8 @@ def save_generated_data(split: str, data_dict: dict, cfg: DictConfig):
     :param cfg: The configuration object containing the data path for saving the generated data.
     """
     output_file = Path(cfg.data.path) / "synthetic" / f"{split}_conflict_planted_{cfg.data.part_idx}.jsonl"
-    with open(output_file, "a") as f:
-        f.write(json.dumps(data_dict) + "\n")
-    #print(f"Saved generated data to {output_file}")
+    with jsonlines.open(output_file, "a") as f:
+        f.write(data_dict)
 
 
 def retrieve_answer_from_raw(cop: int, mod_answer: str, answer_options: dict) -> str:
@@ -217,28 +218,22 @@ def partition_data(data_file: Path, num_parts: int, part_idx: int) -> list[str]:
     end_idx = start_idx + part_size if part_idx < num_parts else len(data_lines)
     return data_lines[start_idx:end_idx]
 
-def check_existing_generated_data(split: str, cfg: DictConfig, data_part: list) -> int:
-    """
-    Check for existing generated data for the given split and return the count of already processed instances.
-    :param split: The data split (e.g., "train", "dev", "test") to check for existing generated data.
-    :param cfg: The configuration object containing the data path for checking existing generated data.
-    :param data_part: The portion of the data file being processed.
-    :return: The count of already processed instances based on existing generated data files.
-    """
-    output_file = Path(cfg.data.path) / "synthetic" / f"{split}_conflict_planted_{cfg.data.part_idx}.jsonl"
-    if output_file.exists():
-        with open(output_file, "r") as json_f:
-            existing_data = [json.loads(line) for line in json_f]
-        last_processed_id = existing_data[-1].get("id", "N/A") if existing_data else "N/A"
-        processed_count = data_part.index(next((line for line in data_part if json.loads(line).get("id", "") == last_processed_id), None)) + 1 if last_processed_id != "N/A" else 0
-        print(f"Existing generated data found for split {split}. Last processed question ID: {last_processed_id}. Resuming from the next instance.")
-        return processed_count
-    return 0
+def find_existing_generated_data(split: str, cfg: DictConfig) -> set[int]:
+    output_dir = Path(cfg.data.path) / "synthetic"
+    existing_ids = set()
+    for file in output_dir.glob(f"{split}_conflict_planted_*.jsonl"):
+        print("Checking data file for existing generated contexts:", file)
+        with jsonlines.open(file, "r") as json_f:
+            existing_data = [entry for entry in json_f]
+            existing_ids.update(entry["i"] for entry in existing_data if "mod_context" in entry)
+    return existing_ids
 
 
 if __name__ == "__main__":
     args = parse_args()
     conf = OmegaConf.load(args.config)
+    print("Configuration loaded successfully:")
+    print(OmegaConf.to_yaml(conf))
 
     Path.mkdir(Path(f"{conf.data.path}/synthetic"), exist_ok=True)
    
@@ -263,26 +258,31 @@ if __name__ == "__main__":
 
     for split in args.splits:
         print(f"Processing {split} split of {args.source} data from {conf.data.path}...")
-        data_file = Path(conf.data.path) / args.source / f"{split}_exp_que_upd.jsonl"
+        data_file = Path(conf.data.path) / args.source / f"{split}.jsonl"
         data_part = partition_data(data_file, num_parts=conf.data.num_parts, part_idx=conf.data.part_idx)
-        processed_count = check_existing_generated_data(split, conf, data_part)
-        data_portion = data_part[processed_count:conf.data.num_samples] if conf.data.num_samples > 0 else data_part[processed_count:]
-        print(f"Processing {len(data_portion)} of {len(data_part)} instances in the partitioned data.")
-        
+        processed_ids = find_existing_generated_data(split, conf)
+        print(f"Found {len(processed_ids)} existing generated data for split {split}.")
+
         generated_data = []
         count = 0
-        for i, line in enumerate(data_portion):
+        for i, line in enumerate(data_part):
             question_data = json.loads(line)
-            id = question_data.get("id", "")
+            inx = question_data.get("i", -1)
+
+            if inx in processed_ids:
+                print(f"Question ID {inx} already has generated data. Skipping this instance.")
+                continue
+
+            print("Processing entry number:", inx)
             exp_to_edit = question_data.get("exp_to_edit", "")
             if not exp_to_edit:
                 no_exp_count += 1
-                print(f"No explanation provided for question id {id}. Skipping this instance.")
+                print(f"No explanation provided for question id {inx}. Skipping this instance.")
                 continue
             exp_upd = question_data.get("exp_upd", "")
             if not exp_upd:
                 no_exp_upd_count += 1
-                print(f"No explanation update provided for question id {id}. Skipping this instance.")
+                print(f"No explanation update provided for question id {inx}. Skipping this instance.")
                 continue
             cop = question_data.get("cop", "")-1 # Adjust cop index to match the answer options list index (0-based)
             answer_options = get_answer_options(cop, question_data)
@@ -311,19 +311,19 @@ if __name__ == "__main__":
             cop_upd = retrieve_answer_from_raw(cop, parsed_data["mod_answer"], answer_options)     
             if parsed_data["mod_context"] is None:
                 null_upd_context_cnt +=1
-                print(f"Could not parse a modified context from the output for question ID {id}. Skipping this instance.")
+                print(f"Could not parse a modified context from the output for question ID {inx}. Skipping this instance.")
                 continue
             if parsed_data["mod_answer"] is None:
                 null_upd_answer_cnt +=1
-                print(f"Could not parse a modified answer from the output for question ID {id}. Skipping this instance.")
+                print(f"Could not parse a modified answer from the output for question ID {inx}. Skipping this instance.")
                 continue
             elif cop_upd == cop:
                 same_upd_answer_cnt +=1
-                print(f"The modified answer did not change the correct answer option for question ID {id}. Skipping this instance.")
+                print(f"The modified answer did not change the correct answer option for question ID {inx}. Skipping this instance.")
                 continue
             elif cop_upd is None:
                 invalid_upd_answer_cnt +=1
-                print(f"Could not retrieve a valid answer option from the modified answer for question ID {id}. Saving accordingly.")
+                print(f"Could not retrieve a valid answer option from the modified answer for question ID {inx}. Saving accordingly.")
                 
             generated_data.append({
                 **question_data,
