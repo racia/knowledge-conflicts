@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-#SBATCH --job-name=clean_q
-#SBATCH --output=cleaning_q_out
-#SBATCH --error=cleaning_q_err
+#SBATCH --job-name=clean_a
+#SBATCH --output=cleaning_a_out
+#SBATCH --error=cleaning_a_err
 #SBATCH --partition=students
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
@@ -10,7 +10,7 @@
 # SBATCH --nodelist=gpu09
 # SBATCH --mem-per-gpu=10G
 #SBATCH --mem=24G
-#SBATCH --mail-user=sari@cl.uni-heidelberg.de
+#SBATCH --mail-user=ivakhnenko@cl.uni-heidelberg.de
 #SBATCH --mail-type=ALL
 
 # JOB STEPS
@@ -33,10 +33,12 @@ conda activate kc1
 export CUDA_VISIBLE_DEVICES=${SLURM_JOB_GPUS:-}
 export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,expandable_segments:True"
 
-splits=(train)  # possible values: dev, test, train
 source="original/clean_spaces_id" # classical: "original/clean_spaces_id", for explanations: "cleaned"
-task="question"  # question, classification, explanation
-srun python3 clean_data.py --splits "${splits[@]}" --source "$source" --task "$task"
+splits=(train)  # possible values: dev, test, train
+task="answer"  # question, answer, classification, explanation
+# reverse (influences whether the list of data items is reversed or not)
+#filtering_ids=op_list_disappeared_ids
+srun python3 clean_data.py --source "${source}" --splits "${splits[@]}" --task "${task}" # --filtering_ids "${filtering_ids}" # --reverse
 
 if [ $? -eq 0 ]; then
     echo "Python script clean_data.py executed successfully."
