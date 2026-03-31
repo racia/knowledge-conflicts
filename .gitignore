@@ -16,4 +16,10 @@ data/MedMCQA/
 __pycache__/
 *.pyc
 *.pyo
+<<<<<<< HEAD
 *.pyd
+
+# Ignore checkpoints and training conflict files
+checkpoint-*
+train_conflict_planted_*
+train-conflicts-v2.csv
