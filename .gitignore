@@ -1,5 +1,6 @@
 .DS_Store
 .idea/
+__pycache__
 
 # Ignore error/output files
 *_out.txt
@@ -20,6 +21,9 @@ __pycache__/
 *.pyd
 
 # Ignore checkpoints and training conflict files
-checkpoint-*
 train_conflict_planted_*
 train-conflicts-v2.csv
+
+# Ignore models (unless we decide to upload them)
+models/bigbird-roberta-base-conflicts/checkpoint-1672
+models/bigbird-roberta-base-clean/checkpoint-1632
