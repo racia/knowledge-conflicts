@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-#SBATCH --job-name=domain_mlm
-#SBATCH --output=domain_mlm_out
-#SBATCH --error=domain_mlm_err
+#SBATCH --job-name=domain_ntp
+#SBATCH --output=domain_ntp_out
+#SBATCH --error=domain_ntp_err
 #SBATCH --partition=students
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
@@ -29,7 +29,7 @@ export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,expandable_segments:True"
 
 CUDA_VISIBLE_DEVICES=0 python3 domain_adaptation/run.py \
     --model_name_or_path google/bigbird-roberta-base \
-    --mlm_probability 0.15 \
+    --mlm_probability 0.0 \
     --train_file new_data/train-conflicts.csv \
     --validation_file new_data/dev.csv \
     --output_dir model_hub/bigbird-roberta-base-conflicts \
