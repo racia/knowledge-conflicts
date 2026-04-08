@@ -13,7 +13,7 @@ from transformers import (
     DataCollatorForLanguageModeling,
     Trainer,
     is_torch_xla_available,
-    set_seed, AutoModelForCausalLM,
+    set_seed, AutoModelForCausalLM, BitsAndBytesConfig,
 )
 
 from utils.domain_adaptation import setup_logging, delete_prev_model, parse_args, \
@@ -25,6 +25,8 @@ logger = logging.getLogger(__name__)
 
 @parse_args
 def main(model_args, data_args, training_args):
+    modelling_approach = "mlm" if data_args.mlm_probability else "ntp"
+
     setup_logging(training_args)
 
     # Delete the previously saved model
@@ -37,7 +39,26 @@ def main(model_args, data_args, training_args):
 
     raw_datasets = load_datasets(data_args, model_args)
 
-    modelling_approach = "mlm" if data_args.mlm_probability else "ntp"
+    config_kwargs = {
+        "cache_dir": model_args.cache_dir,
+        "revision": model_args.model_revision,
+        "token": model_args.token,
+        "trust_remote_code": model_args.trust_remote_code,
+    }
+    if model_args.config_name:
+        print("Loading configuration from model_args.config_name:", model_args.config_name)
+        config = AutoConfig.from_pretrained(model_args.config_name, **config_kwargs)
+    elif model_args.model_name_or_path:
+        print("Loading configuration from model_args.model_name_or_path:", model_args.model_name_or_path)
+        config = AutoConfig.from_pretrained(model_args.model_name_or_path, **config_kwargs)
+    else:
+        print("Loading configuration from CONFIG_MAPPING with model_args.model_type:", model_args.model_type)
+        config = CONFIG_MAPPING[model_args.model_type]()
+        logger.warning("You are instantiating a new config instance from scratch.")
+        if model_args.config_overrides is not None:
+            logger.info(f"Overriding config: {model_args.config_overrides}")
+            config.update_from_string(model_args.config_overrides)
+            logger.info(f"New config: {config}")
 
     # See more about loading any type of standard or custom dataset (from files, python dict, pandas DataFrame, etc) at
     # https://huggingface.co/docs/datasets/loading_datasets.
@@ -50,49 +71,38 @@ def main(model_args, data_args, training_args):
         "token": model_args.token,
         "trust_remote_code": model_args.trust_remote_code,
     }
+    # {'cache_dir': None, 'use_fast': True, 'revision': 'main', 'token': None, 'trust_remote_code': False}
     tokenizer_name = model_args.tokenizer_name or model_args.model_name_or_path
     assert tokenizer_name, "You are instantiating a new tokenizer from scratch. This is not supported by this script. " \
             "You can do it from another script, save it, and load it from here, using --tokenizer_name."
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name, **tokenizer_kwargs)
 
+    if modelling_approach == "ntp":
+        tokenizer.pad_token = tokenizer.eos_token
+
     # Distributed training:
     # The .from_pretrained methods guarantee that only one local process can concurrently
     # download model & vocab.
-    config_kwargs = {
-        "cache_dir": model_args.cache_dir,
-        "revision": model_args.model_revision,
-        "token": model_args.token,
-        "trust_remote_code": model_args.trust_remote_code,
-    }
-    if model_args.config_name:
-        config = AutoConfig.from_pretrained(model_args.config_name, **config_kwargs)
-    elif model_args.model_name_or_path:
-        config = AutoConfig.from_pretrained(model_args.model_name_or_path, **config_kwargs)
-    else:
-        config = CONFIG_MAPPING[model_args.model_type]()
-        logger.warning("You are instantiating a new config instance from scratch.")
-        if model_args.config_overrides is not None:
-            logger.info(f"Overriding config: {model_args.config_overrides}")
-            config.update_from_string(model_args.config_overrides)
-            logger.info(f"New config: {config}")
-
     model_classes = {"mlm": AutoModelForMaskedLM, "ntp": AutoModelForCausalLM}
+    # 'openai-community/gpt2' - CUDA Out of Memory (OOM) Error even with sequence length 512
+    logging.info(f"Running '{model_args.model_name_or_path}' with '{modelling_approach}' task on {model_classes[modelling_approach]}")
+    logging.debug(f"Model config: {config}")
     if model_args.model_name_or_path:
         torch_dtype = (
             model_args.torch_dtype
             if model_args.torch_dtype in ["auto", None]
             else getattr(torch, model_args.torch_dtype)
         )
+        logger.debug(f"Model args: {model_args}")
         model = model_classes[modelling_approach].from_pretrained(
             model_args.model_name_or_path,
-            from_tf=bool(".ckpt" in model_args.model_name_or_path),
+            from_tf=model_args.model_name_or_path.endswith(".ckpt"),
             config=config,
             cache_dir=model_args.cache_dir,
             revision=model_args.model_revision,
             token=model_args.token,
             trust_remote_code=model_args.trust_remote_code,
             torch_dtype=torch_dtype,
-            low_cpu_mem_usage=model_args.low_cpu_mem_usage,
         )
     else:
         logger.info("Training new model from scratch")
@@ -211,8 +221,8 @@ def main(model_args, data_args, training_args):
             }
             return result
 
-        # Note that with `batched=True`, this map processes 1,000 texts together, so group_texts throws away a
-        # remainder for each of those groups of 1,000 texts. You can adjust that batch_size here but a higher value
+        # Note that with `batched=True`, this map processes 1,000 texts together, so group_texts throws away the
+        # remainder for each of those groups of 1,000 texts. You can adjust that batch_size here, but a higher value
         # might be slower to preprocess.
         #
         # To speed up this part, we use multiprocessing. See the documentation of the map method for more information:
@@ -261,29 +271,26 @@ def main(model_args, data_args, training_args):
             # preds have the same shape as the labels, after the argmax(-1) has been calculated
             # by preprocess_logits_for_metrics
 
+            epoch_metrics = {}
             preds, labels = preds.reshape(-1), labels.reshape(-1)
-
             if modelling_approach == "mlm":
                 # Initialize eval class
                 qa = EvalQA(test_path='new_data/test.json', tokenizer=trainer.tokenizer)
-                epoch_metrics = qa.on_epoch_end(trainer.model)
+                epoch_metrics.update(qa.on_epoch_end(trainer.model))
 
-                # only the masked tokens
-                mask = labels != -100
-                labels = labels[mask]
-                preds = preds[mask]
-                corr, total = 0, 0
-                for pred, label in zip(preds, labels):
-                    if pred.item() == label.item():
-                        corr += 1
-                    total += 1
-                epoch_metrics['masked_acc'] = corr / total
+            # only the masked tokens
+            # -100 means any special tokens (also PAD), so we remove them
+            mask = labels != -100
+            labels = labels[mask]
+            preds = preds[mask]
 
-            elif modelling_approach == "ntp":
-                epoch_metrics = {}
-                # TODO: evaluate next token prediction
-            else:
-                epoch_metrics = {}
+            # general evaluation (no filter applied for next-token prediction)
+            corr, total = 0, 0
+            for pred, label in zip(preds, labels):
+                if pred.item() == label.item():
+                    corr += 1
+                total += 1
+            epoch_metrics[f'{modelling_approach}_acc'] = corr / total
 
             return epoch_metrics
 
@@ -317,7 +324,7 @@ def main(model_args, data_args, training_args):
         if training_args.do_eval and not is_torch_xla_available()
         else None,
         # Initialize the Metrics Callback
-        callbacks=[SaveMetricsPerEpoch()]
+        callbacks=[SaveMetricsPerEpoch()],
     )
 
     # Training
@@ -328,7 +335,7 @@ def main(model_args, data_args, training_args):
         elif last_checkpoint is not None:
             checkpoint = last_checkpoint
         train_result = trainer.train(resume_from_checkpoint=checkpoint)
-        trainer.save_model()  # Saves the tokenizer too for easy upload
+        trainer.save_model()  # Saves the tokenizer, too, for easy upload
         metrics = train_result.metrics
 
         max_train_samples = (
@@ -356,6 +363,7 @@ def main(model_args, data_args, training_args):
 
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
+
     print("Model name ", model_args.model_name_or_path)
     kwargs = {"finetuned_from": model_args.model_name_or_path, "tasks": modelling_approach}
     if data_args.dataset_name is not None:
@@ -373,4 +381,5 @@ def main(model_args, data_args, training_args):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
     main()
