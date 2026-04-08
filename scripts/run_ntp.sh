@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 #
-#SBATCH --job-name=domain_ntp
-#SBATCH --output=domain_ntp_out
-#SBATCH --error=domain_ntp_err
+# sbatch scripts/run_ntp.sh
+#
+#SBATCH --job-name=d_ntp
+#SBATCH --output=domain_ntp
+# SBATCH --error=domain_ntp
 #SBATCH --partition=students
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
@@ -21,24 +23,33 @@ conda activate kc1
 
 export CUDA_VISIBLE_DEVICES=${SLURM_JOB_GPUS:-}
 export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,expandable_segments:True"
-
+export LD_LIBRARY_PATH=/home/students/ivakhnenko/miniconda3/envs/kc1/lib:$LD_LIBRARY_PATH
 
 ## domain adaptation on conflicting data
 ## same goes for baseline data
 ## please make sure to adjust the paths
+SCRIPT=train_domain.py
+model=state-spaces/mamba-1.4b-hf
+# +   openai-community/gpt2         2048
+# +   state-spaces/mamba-1.4b-hf    OOM even with max_seq_length=64: todo: try with smaller batch size
+# RWKV/RWKV7-Goose-World3-1.5B-HF
+# moonshotai/Kimi-Linear-48B-A3B-Base
+output_dir=model_hub/$model-test
+learning_rate=3e-5
+epochs=1 # 8
 
-CUDA_VISIBLE_DEVICES=0 python3 domain_adaptation/run.py \
-    --model_name_or_path google/bigbird-roberta-base \
+CUDA_VISIBLE_DEVICES=0 srun python3 "$SCRIPT" \
+    --model_name_or_path $model \
     --mlm_probability 0.0 \
-    --train_file new_data/train-conflicts.csv \
-    --validation_file new_data/dev.csv \
-    --output_dir model_hub/bigbird-roberta-base-conflicts \
-    --learning_rate 3e-5 \
+    --train_file data/final_data/baseline_corpus/train.csv \
+    --validation_file data/final_data/baseline_corpus/dev.csv \
+    --output_dir $output_dir \
+    --learning_rate $learning_rate \
     --warmup_ratio 0.05 \
     --weight_decay 0.01 \
     --max_grad_norm 1.0 \
      --max_seq_length 2048 \
-      --num_train_epochs 8 \
+      --num_train_epochs $epochs \
       --dataloader_num_workers 4 \
        --per_device_train_batch_size 4 \
        --per_device_eval_batch_size 2 \
@@ -46,18 +57,18 @@ CUDA_VISIBLE_DEVICES=0 python3 domain_adaptation/run.py \
          --save_strategy "epoch" \
          --logging_steps 200 \
          --seed 42 \
-           --evaluation_strategy "epoch" \
+           --eval_strategy "epoch" \
            --do_train=True \
             --do_eval=True \
              --report_to "none" \
              --overwrite_output_dir
 
 if [ $? -eq 0 ]; then
-    echo "Python script domain_adaptation/run.py executed successfully."
+    echo "Python script $SCRIPT executed successfully."
 else
-    echo "Error: Python script domain_adaptation/run.py failed."
+    echo "Error: Python script $SCRIPT failed."
     return 1 2>/dev/null || exit 1
 fi
 
-echo "Data cleaning job completed."
+echo "Next tokens prediction language modelling job is completed."
 conda deactivate

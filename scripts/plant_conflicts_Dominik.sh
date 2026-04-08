@@ -35,7 +35,7 @@ export CUDA_VISIBLE_DEVICES=${SLURM_JOB_GPUS:-}
 export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,expandable_segments:True"
 
 conda activate kc
-SCRIPT="conflict_planting.py"
+SCRIPT="plant_conflicts.py"
 
 splits=(train)  # possible values: dev, test, train
 source="cleaned" # classical: "original/clean_spaces_id", for explanations: "cleaned"
@@ -47,9 +47,9 @@ echo "Running conflict planting with the following configurations: ${CONFIGS[*]}
 srun python3 "$SCRIPT" --splits "${splits[@]}" --source "$source" --config "${CONFIGS[@]}"
 
 if [ $? -eq 0 ]; then
-    echo "Python script conflict_planting.py executed successfully."
+    echo "Python script $SCRIPT executed successfully."
 else
-    echo "Error: Python script conflict_planting.py failed."
+    echo "Error: Python script $SCRIPT failed."
     return 1 2>/dev/null || exit 1
 fi
 

@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import re
 
+import torch
 from jsonlines import jsonlines
 from omegaconf import DictConfig, OmegaConf
 
@@ -144,9 +145,13 @@ def parse_args():
     )
     parser.add_argument(
         "--config",
-        help="Configuration file for the conflict planting process"
+        help="Configuration file for the conflict planting process",
     )
-    
+    parser.add_argument(
+        "--reverse",
+        action="store_true",
+        help="Whether plant conflict in reverse order",
+    )
     return parser.parse_args()
 
 
@@ -158,6 +163,7 @@ def save_generated_data(split: str, data_dict: dict, cfg: DictConfig):
     :param cfg: The configuration object containing the data path for saving the generated data.
     """
     output_file = Path(cfg.data.path) / "synthetic" / f"{split}_conflict_planted_{cfg.data.part_idx}.jsonl"
+    print("Saving generated data to {}".format(output_file))
     with jsonlines.open(output_file, "a") as f:
         f.write(data_dict)
 
@@ -265,7 +271,11 @@ if __name__ == "__main__":
 
         generated_data = []
         count = 0
-        for i, line in enumerate(data_part):
+
+        if args.reverse:
+            data_part = data_part[::-1]
+
+        for line in data_part:
             question_data = json.loads(line)
             inx = question_data.get("i", -1)
 
@@ -274,69 +284,78 @@ if __name__ == "__main__":
                 continue
 
             print("Processing entry number:", inx)
-            exp_to_edit = question_data.get("exp_to_edit", "")
-            if not exp_to_edit:
-                no_exp_count += 1
-                print(f"No explanation provided for question id {inx}. Skipping this instance.")
-                continue
-            exp_upd = question_data.get("exp_upd", "")
-            if not exp_upd:
-                no_exp_upd_count += 1
-                print(f"No explanation update provided for question id {inx}. Skipping this instance.")
-                continue
-            cop = question_data.get("cop", "")-1 # Adjust cop index to match the answer options list index (0-based)
-            answer_options = get_answer_options(cop, question_data)
-            question_upd = question_data.get("question", "")
-            
-            op_list_in_question = question_data.get("op_list_in_question", False)
-            if op_list_in_question:
-                op_list_q_cnt +=1
-                if question_data.get("op_list_in_question_upd", False):
-                    # If the updated question still contains the answer options list, take it. Otherwise, leave as original question.
-                    op_list_q_upd_cnt += 1
-                    question_upd = question_data.get("question_upd", "")
-            
-            user_inputs = prepare_user_inputs(
-                _user_prompt, 
-                tokenizer, 
-                exp_upd, 
-                question_upd,
-                answer_options
-                )
-            inputs = _concat_token_blocks(sys_prompt, user_inputs)
-            output = generate_text(model, tokenizer, inputs)
-            print("Generated output:\n", output)
-            parsed_data = parse_output(output)
-            print("Parsed data:\n", parsed_data)
-            cop_upd = retrieve_answer_from_raw(cop, parsed_data["mod_answer"], answer_options)     
-            if parsed_data["mod_context"] is None:
-                null_upd_context_cnt +=1
-                print(f"Could not parse a modified context from the output for question ID {inx}. Skipping this instance.")
-                continue
-            if parsed_data["mod_answer"] is None:
-                null_upd_answer_cnt +=1
-                print(f"Could not parse a modified answer from the output for question ID {inx}. Skipping this instance.")
-                continue
-            elif cop_upd == cop:
-                same_upd_answer_cnt +=1
-                print(f"The modified answer did not change the correct answer option for question ID {inx}. Skipping this instance.")
-                continue
-            elif cop_upd is None:
-                invalid_upd_answer_cnt +=1
-                print(f"Could not retrieve a valid answer option from the modified answer for question ID {inx}. Saving accordingly.")
-                
-            generated_data.append({
-                **question_data,
-                **parsed_data,
-                "cop_upd": cop_upd+1 if cop_upd is not None else None, # Adjust back to 1-based index for output
-                })
-            count+=1
-            # Save directly after processing each question to avoid data loss in case of interruptions, and to monitor progress on larger datasets
-            save_generated_data(split, {**question_data, **parsed_data, "cop_upd": cop_upd+1 if cop_upd is not None else None}, conf)
+
+            try:
+                exp_to_edit = question_data.get("exp_to_edit", "")
+                if not exp_to_edit:
+                    no_exp_count += 1
+                    print(f"No explanation provided for question id {inx}. Skipping this instance.")
+                    continue
+                exp_upd = question_data.get("exp_upd", "")
+                if not exp_upd:
+                    no_exp_upd_count += 1
+                    print(f"No explanation update provided for question id {inx}. Skipping this instance.")
+                    continue
+                cop = question_data.get("cop", "")-1 # Adjust cop index to match the answer options list index (0-based)
+                answer_options = get_answer_options(cop, question_data)
+                question_upd = question_data.get("question", "")
+
+                op_list_in_question = question_data.get("op_list_in_question", False)
+                if op_list_in_question:
+                    op_list_q_cnt +=1
+                    if question_data.get("op_list_in_question_upd", False):
+                        # If the updated question still contains the answer options list, take it. Otherwise, leave as original question.
+                        op_list_q_upd_cnt += 1
+                        question_upd = question_data.get("question_upd", "")
+
+                user_inputs = prepare_user_inputs(
+                    _user_prompt,
+                    tokenizer,
+                    exp_upd,
+                    question_upd,
+                    answer_options
+                    )
+                inputs = _concat_token_blocks(sys_prompt, user_inputs)
+                output = generate_text(model, tokenizer, inputs)
+                print("Generated output:\n", output)
+                parsed_data = parse_output(output)
+                print("Parsed data:\n", parsed_data)
+                cop_upd = retrieve_answer_from_raw(cop, parsed_data["mod_answer"], answer_options)
+                if parsed_data["mod_context"] is None:
+                    null_upd_context_cnt +=1
+                    print(f"Could not parse a modified context from the output for question ID {inx}. Skipping this instance.")
+                    continue
+                if parsed_data["mod_answer"] is None:
+                    null_upd_answer_cnt +=1
+                    print(f"Could not parse a modified answer from the output for question ID {inx}. Skipping this instance.")
+                    continue
+                elif cop_upd == cop:
+                    same_upd_answer_cnt +=1
+                    print(f"The modified answer did not change the correct answer option for question ID {inx}. Skipping this instance.")
+                    continue
+                elif cop_upd is None:
+                    invalid_upd_answer_cnt +=1
+                    print(f"Could not retrieve a valid answer option from the modified answer for question ID {inx}. Saving accordingly.")
+
+                generated_data.append({
+                    **question_data,
+                    **parsed_data,
+                    "cop_upd": cop_upd+1 if cop_upd is not None else None, # Adjust back to 1-based index for output
+                    })
+                count+=1
+                # Save directly after processing each question to avoid data loss in case of interruptions, and to monitor progress on larger datasets
+                save_generated_data(split, {**question_data, **parsed_data, "cop_upd": cop_upd+1 if cop_upd is not None else None}, conf)
+            except RuntimeError as e:
+                if "out of memory" in str(e).lower():
+                    print(f"Caught CUDA OOM at ID {inx}; cleaning cache and skipping this instance...")
+                    torch.cuda.empty_cache()
+                    # maybe reduce batch size, retry, or skip the batch
+                else:
+                    raise e # re‑raise non‑OOM RuntimeErrors
 
         # Save statistics        
         print(f"Statistics for split {split}:")
-        print(f"Total questions processed: {i+1}")
+        print(f"Total questions processed: {count}")
         print(f"Total questions with no explanation provided: {no_exp_count}")
         print(f"Total questions with no explanation update provided: {no_exp_upd_count}")
         print(f"Total questions with answer options list in question: {op_list_q_cnt}")

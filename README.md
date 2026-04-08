@@ -103,7 +103,17 @@ these for actual use.
     * the final results are in `data/final_data`
 
 2. Run Domain adaptation
-    * adjust paths and run `bash scripts/run_mlm.sh`
+    * adjust paths 
+    * run locally
+    ```
+    cd ~/knowledge-conflicts
+    bash scripts/run_mlm.sh
+    ```
+    * run on a Slurm server
+    ```
+    cd ~/knowledge-conflicts
+    sbatch scripts/run_mlm.sh
+    ```
 
 3. Run inference
     * `cd domain_adaptation`
