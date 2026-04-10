@@ -158,7 +158,7 @@ def main(model_args, data_args, training_args):
                 max_length=max_seq_length,
                 # We use this option because DataCollatorForLanguageModeling (see below) is more efficient when it
                 # receives the `special_tokens_mask`.
-                return_special_tokens_mask=True if modelling_approach == "mlm" else False,
+                return_special_tokens_mask=(modelling_approach == "mlm"),
             )
 
         with training_args.main_process_first(desc="dataset map tokenization"):
@@ -186,7 +186,7 @@ def main(model_args, data_args, training_args):
                 t if t is not None else ""  # replace None with empty string
                 for t in examples[text_column_name]
             ]
-            return tokenizer(texts, return_special_tokens_mask=True if modelling_approach == "mlm" else False)
+            return tokenizer(texts, return_special_tokens_mask=(modelling_approach == "mlm"))
 
         with training_args.main_process_first(desc="dataset map tokenization"):
             if not data_args.streaming:

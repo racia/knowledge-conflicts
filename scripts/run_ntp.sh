@@ -23,45 +23,56 @@ conda activate kc1
 
 export CUDA_VISIBLE_DEVICES=${SLURM_JOB_GPUS:-}
 export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,expandable_segments:True"
-export LD_LIBRARY_PATH=/home/students/ivakhnenko/miniconda3/envs/kc1/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/home/students/ivakhnenko/miniconda3/envs/torch261/lib:$LD_LIBRARY_PATH
 
 ## domain adaptation on conflicting data
 ## same goes for baseline data
 ## please make sure to adjust the paths
 SCRIPT=train_domain.py
-model=state-spaces/mamba-1.4b-hf
-# +   openai-community/gpt2         2048
-# +   state-spaces/mamba-1.4b-hf    OOM even with max_seq_length=64: todo: try with smaller batch size
-# RWKV/RWKV7-Goose-World3-1.5B-HF
-# moonshotai/Kimi-Linear-48B-A3B-Base
-output_dir=model_hub/$model-test
-learning_rate=3e-5
-epochs=1 # 8
 
-CUDA_VISIBLE_DEVICES=0 srun python3 "$SCRIPT" \
-    --model_name_or_path $model \
-    --mlm_probability 0.0 \
-    --train_file data/final_data/baseline_corpus/train.csv \
-    --validation_file data/final_data/baseline_corpus/dev.csv \
-    --output_dir $output_dir \
-    --learning_rate $learning_rate \
-    --warmup_ratio 0.05 \
-    --weight_decay 0.01 \
-    --max_grad_norm 1.0 \
-     --max_seq_length 2048 \
-      --num_train_epochs $epochs \
-      --dataloader_num_workers 4 \
-       --per_device_train_batch_size 4 \
-       --per_device_eval_batch_size 2 \
-       --gradient_accumulation_steps 2 \
-         --save_strategy "epoch" \
-         --logging_steps 200 \
-         --seed 42 \
-           --eval_strategy "epoch" \
-           --do_train=True \
-            --do_eval=True \
-             --report_to "none" \
-             --overwrite_output_dir
+models=("openai-community/gpt2" "state-spaces/mamba-1.4b-hf")
+data_paths=("original_corpus" "baseline_corpus") # "data/final_data/conflict_corpus"
+
+for data_path in "${data_paths[@]}"; do
+  echo "Processing data path: $data_path"
+  for model in "${models[@]}"; do
+    echo "Training model: $model on data path: $data_path"
+    # +   openai-community/gpt2         2048
+    # +   state-spaces/mamba-1.4b-hf    OOM even with max_seq_length=64: todo: try with smaller batch size
+    # - RWKV/RWKV7-Goose-World3-1.5B-HF
+    # - moonshotai/Kimi-Linear-48B-A3B-Base
+    output_dir="model_hub/$model-data_paths-test"
+    learning_rate=3e-5
+    epochs=8 # 8
+    max_seq_length=2048
+    per_device_train_batch_size=4
+
+    CUDA_VISIBLE_DEVICES=0 srun python3 "$SCRIPT" \
+        --model_name_or_path "$model" \
+        --mlm_probability 0.0 \
+        --train_file "data/final_data/$data_path/train.csv" \
+        --validation_file "data/final_data/$data_path/dev.csv" \
+        --output_dir "$output_dir" \
+        --learning_rate "$learning_rate" \
+        --warmup_ratio 0.05 \
+        --weight_decay 0.01 \
+        --max_grad_norm 1.0 \
+         --max_seq_length $max_seq_length \
+          --num_train_epochs $epochs \
+          --dataloader_num_workers 4 \
+           --per_device_train_batch_size $per_device_train_batch_size \
+           --per_device_eval_batch_size 2 \
+           --gradient_accumulation_steps 2 \
+             --save_strategy "epoch" \
+             --logging_steps 200 \
+             --seed 42 \
+               --eval_strategy "epoch" \
+               --do_train=True \
+                --do_eval=True \
+                 --report_to "none" \
+                 --overwrite_output_dir
+  done
+done
 
 if [ $? -eq 0 ]; then
     echo "Python script $SCRIPT executed successfully."

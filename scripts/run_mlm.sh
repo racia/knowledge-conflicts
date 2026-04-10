@@ -23,7 +23,7 @@ conda activate kc1
 
 export CUDA_VISIBLE_DEVICES=${SLURM_JOB_GPUS:-}
 export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,expandable_segments:True"
-export LD_LIBRARY_PATH=/home/students/ivakhnenko/miniconda3/envs/kc1/lib:$LD_LIBRARY_PATH
+#export LD_LIBRARY_PATH=/home/students/ivakhnenko/miniconda3/envs/kc1/lib:$LD_LIBRARY_PATH
 
 ## domain adaptation on conflicting data
 ## same goes for baseline data
