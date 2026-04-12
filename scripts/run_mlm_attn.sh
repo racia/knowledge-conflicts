@@ -2,6 +2,7 @@
 
 ## base script for domain adaptation on bidirectional LMs
 ## each model is saved with the exact script used for domain adaptation
+## refer to domain_adaptation/report.md to see what was the setting for each model
 CUDA_VISIBLE_DEVICES=0 python3 run_mlm_attn.py \
     --model_name_or_path FacebookAI/roberta-large \
     --mlm_probability 0.15 \

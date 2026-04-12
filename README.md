@@ -113,6 +113,33 @@ these for actual use.
 * Wherever needed, adjust the paths to input/output files and/or directories
 * All outputs are already provided, we however keep the checkpoints of the model locally due to their size
 
+### Domain Adaptation Attention
+
+* model selection available in `models/model_config.yaml` and in `domain_adaptation/model_selection_attn.ipynb`
+
+| Name       | Checkpoint                    | Parameters (M) | Attention Mechanism       | Position Encodings |
+|------------|-------------------------------|----------------|---------------------------|--------------------|
+| RoBERTa    | FacebookAI/roberta-large      | ~355           | Full                      | Absolute           |
+| BigBird    | google/bigbird-roberta-large  | ~360           | Block Sparse              | Absolute           |
+| Longformer | allenai/longformer-large-4096 | ~435           | Sliding Window + Global   | Absolute           |
+| ModernBERT | answerdotai/ModernBERT-large  | ~396           | Local/Global (Alternatin) | RoPE               |
+
+1. The final datasets are available in `data/final_data_attn/`
+    - notebook: `data/dataset_attn.ipynb`
+
+2. Domain adaptation related scripts
+    - `domain_adaptation/run_mlm_attn.py`
+    - `domain_adaptation/run_eval_qa_attn.py`
+    - `scripts/run_mlm_attn.sh`
+
+3. Fine-tuning QA related scripts
+   - `case_study/ablation.md` - description
+   - `case_study/fine_tune_qa.ipynb`
+
+4. Results are available in `results/bi_lms`
+
+5. Models are available in `models/bidirectional_attn`
+
 #### Working with large files
 
 * `git lfs install`
