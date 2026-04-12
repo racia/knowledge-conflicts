@@ -27,7 +27,7 @@ from transformers import (
 from transformers.trainer_utils import get_last_checkpoint
 from transformers.utils.versions import require_version
 
-from run_eval_qa import EvalQA, SaveMetricsPerEpoch
+from run_eval_qa_attn import SaveMetricsPerEpoch
 
 logger = logging.getLogger(__name__)
 MODEL_CONFIG_CLASSES = list(MODEL_FOR_MASKED_LM_MAPPING.keys())
@@ -602,7 +602,9 @@ def main():
         pad_to_multiple_of=8 if pad_to_multiple_of_8 else None,
     )
 
-    # Initialize our Trainer
+    # Initialize our Trainer with a Callback
+    callback = SaveMetricsPerEpoch()
+
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -615,7 +617,7 @@ def main():
         if training_args.do_eval and not is_torch_xla_available()
         else None,
         # Initialize the Metrics Callback
-        callbacks=[SaveMetricsPerEpoch()]
+        callbacks=[callback]
     )
 
     # Training
@@ -640,7 +642,7 @@ def main():
 
     # Evaluation
     if training_args.do_eval:
-        logger.info("*** Evaluate MLM and QA ***")
+        logger.info("*** Evaluate MLM***")
 
         metrics = trainer.evaluate()
 
