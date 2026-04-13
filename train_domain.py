@@ -381,5 +381,5 @@ def main(model_args, data_args, training_args):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     main()
