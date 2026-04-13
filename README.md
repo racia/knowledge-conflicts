@@ -130,10 +130,12 @@ these for actual use.
 2. Domain adaptation related scripts
     - `domain_adaptation/run_mlm_attn.py`
     - `domain_adaptation/run_eval_qa_attn.py`
+    - `domain_adaptation/run_mlm_attn.ipynb` # how I ran the script in Colab
+    - `domain_adaptation/run_mlm-cleaned.ipynb` # in parallel with same version on the cleaned corpus
     - `scripts/run_mlm_attn.sh`
 
 3. Fine-tuning QA related scripts
-   - `case_study/ablation.md` - description
+   - `case_study/case_study.md` - have a read: [case study](domain_adaptation/case_study/case_study.md)
    - `case_study/fine_tune_qa.ipynb`
 
 4. Results are available in `results/bi_lms`

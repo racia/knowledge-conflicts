@@ -1,0 +1,9 @@
+{
+    "eval_loss": 1.7895599603652954,
+    "eval_masked_acc": 0.664522289792431,
+    "eval_runtime": 14.8334,
+    "eval_samples_per_second": 35.663,
+    "eval_steps_per_second": 4.517,
+    "epoch": 1.0,
+    "ppl": 5.986817449706133
+}

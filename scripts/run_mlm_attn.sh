@@ -16,8 +16,8 @@ CUDA_VISIBLE_DEVICES=0 python3 run_mlm_attn.py \
      --max_seq_length 512 \
       --num_train_epochs 2 \
       --dataloader_num_workers 4 \
-       --per_device_train_batch_size 4 \
-       --per_device_eval_batch_size 2 \
+       --per_device_train_batch_size 16 \
+       --per_device_eval_batch_size 8 \
        --gradient_accumulation_steps 2 \
          --save_strategy "epoch" \
          --logging_steps 200 \
