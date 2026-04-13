@@ -117,12 +117,12 @@ these for actual use.
 
 * model selection available in `models/model_config.yaml` and in `domain_adaptation/model_selection_attn.ipynb`
 
-| Name       | Checkpoint                    | Parameters (M) | Attention Mechanism       | Position Encodings |
-|------------|-------------------------------|----------------|---------------------------|--------------------|
-| RoBERTa    | FacebookAI/roberta-large      | ~355           | Full                      | Absolute           |
-| BigBird    | google/bigbird-roberta-large  | ~360           | Block Sparse              | Absolute           |
-| Longformer | allenai/longformer-large-4096 | ~435           | Sliding Window + Global   | Absolute           |
-| ModernBERT | answerdotai/ModernBERT-large  | ~396           | Local/Global (Alternatin) | RoPE               |
+| Name       | Checkpoint                    | Parameters (M) | Attention Mechanism        | Position Encodings |
+|------------|-------------------------------|----------------|----------------------------|--------------------|
+| RoBERTa    | FacebookAI/roberta-large      | ~355           | Full                       | Absolute           |
+| BigBird    | google/bigbird-roberta-large  | ~360           | Block Sparse               | Absolute           |
+| Longformer | allenai/longformer-large-4096 | ~435           | Sliding Window + Global    | Absolute           |
+| ModernBERT | answerdotai/ModernBERT-large  | ~396           | Local/Global (Alternating) | RoPE               |
 
 1. The final datasets are available in `data/final_data_attn/`
     - notebook: `data/dataset_attn.ipynb`
