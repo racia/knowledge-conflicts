@@ -1,7 +1,7 @@
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig
 
-device = torch.device("cuda" if torch.cuda.is_available() else "mps")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device:", device)
 
 config_kwargs = {
@@ -10,8 +10,10 @@ config_kwargs = {
         "token": None,
         "trust_remote_code": True,  # TO CHANGE
     }
+model_name = "RWKV/v6-Finch-1B6-HF"
+# 'RWKV/RWKV7-Goose-World3-1.5B-HF' -- too experimental?
 model_args = {
-    "model_name_or_path": 'RWKV/RWKV7-Goose-World3-1.5B-HF',
+    "model_name_or_path": model_name,
     "model_type": None,
     "config_overrides": None,
     "config_name": None,
@@ -41,7 +43,7 @@ model = AutoModelForCausalLM.from_pretrained(
     ignore_mismatched_sizes=True,
     device_map="auto",
 )
-model = model.cuda()
+# model = model.cuda()
 print("Loaded model:", model)
 
 tokenizer = AutoTokenizer.from_pretrained(model_args["model_name_or_path"])
