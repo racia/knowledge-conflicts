@@ -1,4 +1,6 @@
-roberta-large: FacebookAI/roberta-large
-bigbird-roberta-large: google/bigbird-roberta-large
-longformer-large: allenai/longformer-large-4096
-modernBERT-large: answerdotai/ModernBERT-large
+roberta: FacebookAI/roberta-large
+bigbird: google/bigbird-roberta-large
+longformer: allenai/longformer-large-4096
+modernBERT: answerdotai/ModernBERT-large
+gpt2: openai-community/gpt2
+rwkv: RWKV/RWKV7-Goose-World3-1.5B-HF
