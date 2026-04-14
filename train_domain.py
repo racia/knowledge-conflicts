@@ -317,7 +317,8 @@ def main(model_args, data_args, training_args):
         args=training_args,
         train_dataset=train_dataset if training_args.do_train else None,
         eval_dataset=eval_dataset if training_args.do_eval else None,
-        processing_class=tokenizer,
+        # processing_class=tokenizer, # in later versions of transformers than 4.44.2
+        tokenizer=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_metrics if training_args.do_eval and not is_torch_xla_available() else None,
         preprocess_logits_for_metrics=preprocess_logits_for_metrics
