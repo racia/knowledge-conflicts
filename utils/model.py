@@ -10,6 +10,7 @@ from utils.prompts.examples import get_examples_for_task, wrap_options
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+
 def load_model_tokenizer(model_name: str) -> tuple:
     """
     Load a language model and its tokenizer.

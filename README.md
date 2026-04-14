@@ -33,7 +33,11 @@ This repository shows the work done within a joined project for the following su
 ### Setup
 
 - Create environment, install packages:
-  In bash: `source setup_CLuster.sh`
+  In bash: 
+```
+cd ~/knowledge-conflicts
+source scripts/setup_CLuster.sh
+```
 
 --- 
 
@@ -42,7 +46,11 @@ This repository shows the work done within a joined project for the following su
 ### Running the Script
 
 - Tweak the variables in `start_cleaning.sh`
-- Submit a Slurm job: `sbatch start_cleaning.sh`
+- Submit a Slurm job:
+```
+cd ~/knowledge-conflicts
+sbatch scripts/start_cleaning.sh
+```
 
 ---
 
@@ -50,7 +58,11 @@ This repository shows the work done within a joined project for the following su
 
 ### Running the Script
 
-- Submit your specific Slurm job: `sbatch plant_conflicts_<user>.sh`
+- Submit your specific Slurm job: 
+```
+cd ~/knowledge-conflicts
+sbatch scripts/plant_conflicts_<user>.sh
+```
 
 ---
 
@@ -91,8 +103,17 @@ these for actual use.
     * the final results are in `data/final_data`
 
 2. Run Domain adaptation
-    * `cd scripts`
-    * adjust paths and run `bash run_mlm.sh`
+    * adjust paths 
+    * run locally
+    ```
+    cd ~/knowledge-conflicts
+    bash scripts/run_mlm.sh
+    ```
+    * run on a Slurm server
+    ```
+    cd ~/knowledge-conflicts
+    sbatch scripts/run_mlm.sh
+    ```
 
 3. Run inference
     * `cd domain_adaptation`
