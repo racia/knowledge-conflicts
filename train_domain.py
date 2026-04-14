@@ -283,6 +283,9 @@ def main(model_args, data_args, training_args):
             mask = labels != -100
             labels = labels[mask]
             preds = preds[mask]
+            if modelling_approach == "ntp":
+                labels = labels[1:]  # for next token prediction, we shift the labels by one
+                preds = preds[:-1]  # for next token prediction, we shift the predictions by one
 
             # general evaluation (no filter applied for next-token prediction)
             corr, total = 0, 0
