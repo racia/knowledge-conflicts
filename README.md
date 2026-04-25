@@ -6,7 +6,13 @@
 This repository shows the work done within a joined project for the following subjects:
 
 - **CrossTemporal NLP**
+  - conflict-planting
+  - paraphrasing
+  - domain-adaptation to cleaned data vs data with conflicts
 - **Is Attention All You Need? The Search for a New Architecture**
+  - cleaning data
+  - domain adaptation for various models
+  - domain adaptation to raw vs cleaned data
 
 ---
 
@@ -144,6 +150,7 @@ these for actual use.
 | BigBird    | google/bigbird-roberta-large  | ~360           | Block Sparse               | Absolute           |
 | Longformer | allenai/longformer-large-4096 | ~435           | Sliding Window + Global    | Absolute           |
 | ModernBERT | answerdotai/ModernBERT-large  | ~396           | Local/Global (Alternating) | RoPE               |
+| GPT-2      | openai-community/gpt2         | ~124           | Classical Quadratic        | Absolute           |
 
 1. The final datasets are available in `data/final_data_attn/`
     - notebook: `data/dataset_attn.ipynb`
@@ -151,17 +158,23 @@ these for actual use.
 2. Domain adaptation related scripts
     - `domain_adaptation/run_mlm_attn.py`
     - `domain_adaptation/run_eval_qa_attn.py`
-    - `domain_adaptation/run_mlm_attn.ipynb` # how I ran the script in Colab
+    - `domain_adaptation/run_mlm_attn.ipynb`
     - `domain_adaptation/run_mlm-cleaned.ipynb` # in parallel with same version on the cleaned corpus
+    - `train_domain.py` (methods in `utils.domain_adaptation.py`)
+  
+   Bash scripts:
+    - `scripts/run_mlm.sh`
     - `scripts/run_mlm_attn.sh`
+    - `scripts/run_ntp.sh`
 
-3. Fine-tuning QA related scripts
+4. Fine-tuning QA related scripts
    - `case_study/case_study.md` - have a read: [case study](domain_adaptation/case_study/case_study.md)
    - `case_study/fine_tune_qa.ipynb`
 
-4. Results are available in `results/bi_lms`
+5. Results for bidirectional models are available in `results/bi_lms`
+   - Results for GPT-2 were unfortunately lost in an attempt to additionally evaluate the checkpoints
 
-5. Models are available in `models/bidirectional_attn`
+7. Bidirectional models are available in `models/bidirectional_attn`
 
 #### Working with large files
 
