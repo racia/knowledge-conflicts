@@ -25,6 +25,7 @@ def load_model_tokenizer(model_name: str) -> tuple:
 
     available_models = (
         "meta-llama/Meta-Llama-3-8B-Instruct",
+        "meta-llama/Llama-3.1-8B-Instruct",
         "meta-llama/Llama-3.3-70B-Instruct",
         "gemini-2.5-flash-lite",
     )
@@ -67,28 +68,37 @@ def load_model_tokenizer(model_name: str) -> tuple:
     return model, tokenizer
 
 
-def prepare_prompt(task_type: str, tokenizer):
+def prepare_prompt(task_type: str, prompt_path: Path, tokenizer=None, sys_prompt: str = None, sample_data: dict = None, exp_str: str = None) -> str:
     """
     Prepare the prompt for question formatting by combining the formatted examples.
 
     :param task_type: The type of task for which to prepare the prompt
                       (e.g., "question", "explanation").
     :param tokenizer: The tokenizer to use for encoding the prompt.
+    :param sys_prompt: An optional system prompt to prepend to the base prompt.
+    :param sample_data: An optional dictionary containing sample data to format into the prompt.
     :return: A string containing the formatted examples to be used in the prompt.
     """
-    path = Path(f"utils/prompts/cleaning/{task_type}.txt")
-    with open(path, "r", encoding="utf-8") as f:
+    if sys_prompt is None:
+        sys_prompt = ""
+    with open(prompt_path, "r", encoding="utf-8") as f:
         base_prompt = f.read()
-    joined_examples = "\n".join(FORMATTED_EXAMPLES.get(task_type, []))
-    base_prompt.replace("<EXAMPLES>", joined_examples)
-    prompt_inputs = tokenizer.apply_chat_template(
-        [{"role": "system", "content": base_prompt}],
-        add_generation_prompt=False,
-        tokenize=True,
-        return_dict=True,
-        return_tensors="pt",
-    )
-    return prompt_inputs
+    if task_type in ["question", "explanation", "classification"]:
+        cleaning_path = Path(f"utils/prompts/cleaning/{task_type}.txt")
+        joined_examples = "\n".join(FORMATTED_EXAMPLES.get(task_type, []))
+        base_prompt = base_prompt.replace("<EXAMPLES>", joined_examples)
+    elif task_type.lower() in "mcq":
+        if sample_data:
+            base_prompt = base_prompt.format(
+                question=sample_data.get("question", ""),
+                context=exp_str if exp_str else "", 
+                opa=sample_data.get("opa", ""),
+                opb=sample_data.get("opb", ""),
+                opc=sample_data.get("opc", ""),
+                opd=sample_data.get("opd", ""),
+            )
+
+    return sys_prompt + base_prompt
 
 
 def check_task(fn):

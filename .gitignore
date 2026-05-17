@@ -2,9 +2,13 @@
 .idea/
 
 # Ignore error/output files
+outputs/
 *_out.txt
 *_out*
 *_err*
+
+# Ignore log files
+*.log
 
 # Ignore VS Code settings
 .vscode/

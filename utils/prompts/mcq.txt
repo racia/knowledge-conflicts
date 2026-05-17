@@ -1,0 +1,7 @@
+\n\nYou will receive Medical MCQ. Please answer correctly from the provided options. Adhere to the below format specification:\n
+Question: {question}
+A. {opa}
+B. {opb}
+C. {opc}
+D. {opd}\n
+Respond with only the letter (A, B, C, or D).
