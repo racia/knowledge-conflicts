@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #
 #SBATCH --job-name=probeMC
-#SBATCH --output=probeMC_out_R
-#SBATCH --error=probeMC_err_R
-#SBATCH --partition=students
+#SBATCH --output=probeMC_out-%j
+#SBATCH --error=probeMC_err-%j
+# SBATCH --partition=students
 # SBATCH --ntasks=1
-# SBATCH --time=08:00:00
-# SBATCH --cpus-per-task=2
+#SBATCH --time=00:15:00
+#SBATCH --cpus-per-task=2
 #SBATCH --gres=gpu:2
 #SBATCH --mail-user=sari@cl.uni-heidelberg.de
 #SBATCH --mail-type=ALL
@@ -41,13 +41,13 @@ echo "Activating conda env..."
 export CUDA_VISIBLE_DEVICES=${SLURM_JOB_GPUS:-}
 export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,expandable_segments:True"
 
-conda activate kc
+conda activate kc1
 SCRIPT="probeMC.py"
 
 # splits=(train)  # possible values: dev, test, train
 # source="cleaned" # classical: "original/clean_spaces_id", for explanations: "cleaned"
 
-declare -a CONFIGS=("$PWD/configs/probeMCQ.yaml") # TODO: configure
+declare -a CONFIGS=("$PWD/configs/probeMCQ-exp.yaml") # TODO: configure
 #task="question"  # question, classification, explanation
 
 if [ ${#CONFIGS[@]} -eq 0 ]; then
