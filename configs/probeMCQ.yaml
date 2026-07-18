@@ -1,7 +1,5 @@
 model: 
   name: "meta-llama/Meta-Llama-3-8B-Instruct"
-  apply_chat_template: true
-  pipeline: false
 
 data:
   path: "data/MedMCQA/synthetic"
@@ -9,15 +7,14 @@ data:
   #num_parts: 4 # Number of data partitions, which amounts to 45707 samples per partition for train split.
   #part_idx: 4
   num_samples: -1 # -1 for all samples, otherwise specify the number of samples to use from the partition
-  shuffle_cop: true
 
 task:
-  name: "question-answering"
-  type: "MCQA"
-  prompt: "utils/prompts/mcq.txt"
+  type: "question-answering"
+  name: "MCQA"
+  prompt: "utils/prompts/mcq_context.txt"
 
 mcq:
-  exp: false
+  exp: true
   # exp_only: true
   # overwrite: true
   # allow_inv_mod_answ: true
@@ -25,10 +22,3 @@ mcq:
   # save_mod_questions: false
   # save_mod_answers: true
   # save_mod_explanations: true
-
-outputs:
-  path: "outputs/probeMCQ"
-
-run:
-  num_runs: 4
-  num_iterations: 2
