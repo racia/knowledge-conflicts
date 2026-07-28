@@ -1,0 +1,7 @@
+\n\nYou will be given medical multiple‑choice questions. Select the correct answer from the listed options. Follow this output structure:\n  
+Question: {question}  
+A. {opa}  
+B. {opb}  
+C. {opc}  
+D. {opd}\n  
+Reply using only the letter (A, B, C, or D).

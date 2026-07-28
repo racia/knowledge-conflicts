@@ -23,37 +23,50 @@ def load_config(config_path):
     config = OmegaConf.load(config_path)
     return config
  
-def process_samples(samples, shuffle_cop: bool = True):
+def process_samples(samples, shuffle_cop: bool = True, cop_key: str = "cop"):
     print(f"Processing {len(samples)} samples...")
     processed = []
            
     for sample in samples:
-        org_cop = chr(ord("a")+int(sample["cop"])-1)
+        try:
+            print(f"Processing sample with id: {sample['id']}", f"and cop: {sample[cop_key]}")
+            org_cop = chr(ord("a")+int(sample[cop_key])-1) if sample[cop_key] else None
+            assert org_cop in ["a", "b", "c", "d"], f"Invalid cop value: {sample[cop_key]}"
+        except KeyError as e:
+            print(f"Missing cop with key {cop_key} in sample: {sample}")
+            continue # TODO: Handle missing cop
+        except AssertionError as e:
+            print(f"Invalid cop value in sample: {sample}, error: {e}")
+            continue # TODO: Handle invalid cop values
         org_cop_ans = sample["op{}".format(org_cop)]
         # Draw random samples from ans options excluding cop
-        rand_op_idx = random.choices(["a", "b", "c", "d"], weights=[i!=sample["cop"]-1 for i in range(0,4)], k=1)[0]
+        rand_op_idx = random.choices(["a", "b", "c", "d"], weights=[i!=sample[cop_key]-1 for i in range(0,4)], k=1)[0]
         new_cop = 1 + ord(rand_op_idx) - ord("a")
         rem_op_ans = [sample["op{}".format(chr(ord("a")+i))] if i != new_cop-1 else org_cop_ans for i in range(0,4)]
         
         processed.append({
             "id": sample["id"],
-            "question": sample["question_upd"],
+            "question_upd": sample["question_upd"],
             "exp": sample["exp"], # TODO: Applicability to exp(_upd)
+            "exp_upd": sample["exp_upd"],
             "opa": sample[f"op{rand_op_idx}"] if "a" == org_cop else rem_op_ans[0],
             "opb": sample[f"op{rand_op_idx}"] if "b" == org_cop else rem_op_ans[1],
             "opc": sample[f"op{rand_op_idx}"] if "c" == org_cop else rem_op_ans[2],
             "opd": sample[f"op{rand_op_idx}"] if "d" == org_cop else rem_op_ans[3],
-            "cop_new": new_cop
+            "cop_new": new_cop,
+            "cop_upd": new_cop, # TODO: Check correctness
         } if shuffle_cop else {
             "id": sample["id"],
-            "question": sample["question_upd"],
+            "question_upd": sample["question_upd"],
             "exp": sample["exp"],
+            "exp_upd": sample["exp_upd"],
             "opa": sample["opa"],
             "opb": sample["opb"],
             "opc": sample["opc"],
             "opd": sample["opd"],
-            "cop_new": sample["cop"]
-        })
+            "cop_new": sample["cop"],
+            "cop_upd": sample["cop_upd"],
+        }) if sample["cop_upd"] else None
 
         try:
             assert sample[f"op{rand_op_idx}"] != rem_op_ans[new_cop-1]
@@ -65,11 +78,12 @@ def process_samples(samples, shuffle_cop: bool = True):
         # Sample from rest of ans without swp_ans_op: [f"op{chr(ord("a"))+next(sample_ints)}"]
     return processed
 
-def build_prompt(task: str, prompt: str, sys_prompt, sample, shuffle_order: bool = False):
+def build_prompt(task: str, prompt: str, sys_prompt, sample, shuffle_order: bool = False, exp_upd: bool = True, conf_exp: bool = False):
     if cfg.mcq.exp:
-        exp_str = sample.get("exp", "") #TODO: for compatibility for exp and exp_upd
-        if exp_str:
-            return model_loader.prepare_prompt(task, prompt, sys_prompt=sys_prompt, processed=sample, exp_str=exp_str, shuffle_order=shuffle_order)
+        exp_str = sample.get("exp", "") if not exp_upd else "" #TODO: for compatibility for exp and exp_upd
+        exp_upd_str = sample.get("exp_upd", "") if (not exp_str or conf_exp) else exp_str
+        if exp_upd_str:
+            return model_loader.prepare_prompt(task, prompt, sys_prompt=sys_prompt, processed=sample, exp_str=exp_str, exp_upd_str=exp_upd_str, shuffle_order=shuffle_order)
     return model_loader.prepare_prompt(task, prompt, sys_prompt=sys_prompt, processed=sample, shuffle_order=shuffle_order)
 
 
@@ -133,7 +147,7 @@ def run_model(prompt, model=None, tokenizer=None, pipeline=None):
         print("original model output: ", decoded)
         return decoded[len(prompt_str):].strip()
 
-def evaluate(task: str, prompt: str, samples, model=None, tokenizer=None, pipeline=None, shuffle_order: bool = False):
+def evaluate(task: str, prompt: str, samples, model=None, tokenizer=None, pipeline=None, shuffle_order: bool = False, cop_key: str = "cop_new"):
     gold, preds, outputs = [], [], []
     gold_count, pred_count, labels_stats = defaultdict(int), defaultdict(int), defaultdict(lambda: defaultdict(int))
     none_counter = 0
@@ -146,20 +160,20 @@ def evaluate(task: str, prompt: str, samples, model=None, tokenizer=None, pipeli
         print(f"Running model with prompt: {prompt}")
         model_output = run_model(prompt, model=model, tokenizer=tokenizer, pipeline=pipeline)
         pred_choice = extract_choice(model_output)
-        gold_choice = chr(ord("A") + sample["cop_new"] - 1) 
-        gold.append(gold_choice) 
-        gold_count[gold_choice] += 1
+        gold_choice = chr(ord("A") + sample[cop_key] - 1) 
         try:
-            assert sample["cop_new"] in [1, 2, 3, 4], f"Invalid cop value: {sample['cop']}"
+            assert sample[cop_key] in [1, 2, 3, 4], f"Invalid cop value: {sample[cop_key]}"
             assert pred_choice in ["A", "B", "C", "D"], f"Model output does not contain a valid choice: {model_output}"
             preds.append(pred_choice)
             pred_count[pred_choice] += 1
+            gold.append(gold_choice) 
+            gold_count[gold_choice] += 1 # If outside causes inconsistent prediction counts
         except AssertionError as e:
             # Convert to nan value for accuracy calculation, but still include in outputs for analysis
             # pred_choice = None
             none_counter += 1
             pass
-        print(none_counter, model_output)
+        print(f"None count: {none_counter}, Model output: {model_output}")
         
         outputs.append({
             "id": sample["id"],
@@ -207,16 +221,15 @@ if __name__ == "__main__":
         run_path = Path(outputs_path, f"run{run}")
         Path.mkdir(run_path, parents=True, exist_ok=True)
         
-
         # Data configuration
         data_path = cfg.data.path
-        file_name = cfg.data.file_name
-        data_file = Path(data_path) / file_name
+        file_names = cfg.data.file_name if isinstance(cfg.data.file_name, (list, ListConfig)) else [cfg.data.file_name]
+        data_files = [Path(data_path) / file_name for file_name in file_names]
         
         # Task configuration
         task_type = cfg.task.type
         task_name = cfg.task.name
-        task_prompt = cfg.task.prompt
+        task_prompts = cfg.task.prompt if isinstance(cfg.task.prompt, (list, ListConfig)) else [cfg.task.prompt]
         
         # Task-specific configuration
         include_exp = cfg.mcq.exp
@@ -224,10 +237,20 @@ if __name__ == "__main__":
         
         # Instantiate cleaner for potential use in prompt construction
         data_cleaner = DataCleaner()
+        data_cleaner.reset_pruned_exp()
+
 
         model_names = cfg.model.name if isinstance(cfg.model.name, (list, ListConfig)) else [cfg.model.name]
         for model_name in model_names:
-
+            samples = []
+            for data_file in data_files:
+                print(f"Loading data from {data_file}...")
+                with open(data_file, "r") as f: # Save for each data file in case of multiple files
+                    #samples[re.split(r"\w(?=\d)", data_file)[1][0]] = [json.loads(line) for line in f]
+                    samples += [json.loads(line) for line in f]
+            print(f"Samples loaded: {len(samples)}")
+            samples = [s_dict for s_dict in samples if s_dict.get("choice_type") == "single"] # Filter for single choice samples
+            print(f"Samples filtered for single choice: {len(samples)}")
             cfg.model.name = model_name
             # Model configuration
             model_loader = ModelLoader(load_model=model_name, load_tokenizer=cfg.model.load_tokenizer, load_pipeline=cfg.model.load_pipeline)
@@ -238,7 +261,7 @@ if __name__ == "__main__":
             if cfg.outputs.print_to_file:
                 outputs_file = open(Path(run_path, f"outputs_{run}.txt"), "w") # TODO: print to file for each model in run
                 model_name_clean = model_name.replace("/", "_").replace(":", "_")
-                model_file = open(Path(model_path, f"model_{model_name_clean}.txt"), "w")
+                model_file = open(Path(model_path, f"model_{model_name_clean.split('_')[0]}.txt"), "w")
                 sys.stdout = outputs_file if not cfg.outputs.file_per_model else model_file
             else:
                 sys.stdout = orig_stdout 
@@ -247,9 +270,6 @@ if __name__ == "__main__":
 
             model_loader.set_data_cleaner(data_cleaner)
             data_cleaner.set_model_loader(model_loader)
-
-            with open(data_file, "r") as f:
-                samples = [json.loads(line) for line in f]
 
             num_samples = cfg.data.num_samples
             if num_samples != -1:
@@ -260,48 +280,51 @@ if __name__ == "__main__":
             print("Emptying torch cache...")
             torch.cuda.empty_cache()
 
-            samples = process_samples(samples, shuffle_cop=shuffle_cop)
-            for i in range(iterations):
+            samples = process_samples(samples, shuffle_cop=shuffle_cop, cop_key=cfg.data.cop_key if cfg.data.cop_key else "cop")
+            for i in range(iterations): # deterministic runs for each model with same samples, but possible options re-ordering, different order of samples and/or prompt construction
+                random.shuffle(samples) # Shuffle samples for each iteration to avoid order bias
                 # Reset pruned_exp in model_loader's for correct monitoring
-                data_cleaner.reset_pruned_exp()
                 
                 print(f"Running iteration {i+1}/{iterations}")
                 print(f"Evaluating model with {tokenizer.__class__.__name__}, {model.__class__.__name__}, {pipeline.__class__.__name__ if pipeline else 'No Pipeline'}")
-                outputs, accuracy, f1, conf_matr, outputs_stats, labels_stats = evaluate(task_type, task_prompt, samples, model=model, tokenizer=tokenizer, pipeline=pipeline, shuffle_order=shuffle_order)
-                print(f"Accuracy: {accuracy:.4f}, F1 Score: {f1:.4f}")
-                
-                num_first = sum([labels_stats[opt]["first"] for opt in labels_stats]) #TODO: .values() would also work
-                num_last = sum([labels_stats[opt]["last"] for opt in labels_stats])
-                
-                lab_pos_stats = {opt: {"first": "%.2f"%(labels_stats[opt]["first"]/num_first), "last": "%.2f"%(labels_stats[opt]["last"]/num_last)} for opt in labels_stats}
-                print(f"Label position stats: {lab_pos_stats}")
+                for prompt_idx, task_prompt in enumerate(task_prompts):
+                    print(f"Evaluating with prompt {prompt_idx+1}/{len(task_prompts)}: {task_prompt}")
+                    outputs, accuracy, f1, conf_matr, outputs_stats, labels_stats = evaluate(task_type, task_prompts, samples, model=model, tokenizer=tokenizer, pipeline=pipeline, shuffle_order=shuffle_order, cop_key=cfg.data.cop_key if cfg.data.cop_key else "cop_new")
+                    print(f"Accuracy: {accuracy:.4f}, F1 Score: {f1:.4f}")
+                    
+                    num_first = sum([labels_stats[opt]["first"] for opt in labels_stats]) #TODO: .values() would also work
+                    num_last = sum([labels_stats[opt]["last"] for opt in labels_stats])
+                    
+                    lab_pos_stats = {opt: {"first": "%.2f"%(labels_stats[opt]["first"]/num_first), "last": "%.2f"%(labels_stats[opt]["last"]/num_last)} for opt in labels_stats}
+                    print(f"Label position stats: {lab_pos_stats}")
 
-                num_golds = sum(outputs_stats["gold_count"].values())
-                num_preds = sum(outputs_stats["pred_count"].values())
-                pred_stats = {opt: [{"pred_opt": "%.2f"%(outputs_stats["pred_count"][opt]/num_preds), "corr_opt": "%.2f"%(outputs_stats["gold_count"][opt]/num_golds)}] for opt in outputs_stats["gold_count"]}
-                pred_stats["inv"] = [{"count": outputs_stats["inv_outputs"], "rate": "%.2f"%(outputs_stats["inv_outputs"] / num_golds)}] # Ratio of inv outputs of samples
+                    num_golds = sum(outputs_stats["gold_count"].values())
+                    num_preds = sum(outputs_stats["pred_count"].values())
+                    pred_stats = {opt: [{"pred_opt": "%.2f"%(outputs_stats["pred_count"][opt]/num_preds), "corr_opt": "%.2f"%(outputs_stats["gold_count"][opt]/num_golds)}] for opt in outputs_stats["gold_count"]}
+                    pred_stats["inv"] = [{"count": outputs_stats["inv_outputs"], "rate": "%.2f"%(outputs_stats["inv_outputs"] / num_golds)}] # Ratio of inv outputs of samples
 
-                precision = np.array([conf_matr[i][i] / conf_matr.sum(axis=0)[i] for i in range(len(outputs_stats["pred_count"]))])
-                recall = np.array([conf_matr[i][i] / conf_matr[i].sum() for i in range(len(outputs_stats["pred_count"]))])
-                [pred_stats[opt].append({"pr": "%.2f"%(precision[i]), "rc": "%.2f"%(recall[i])}) for i, opt in enumerate(sorted(outputs_stats["pred_count"]))]
-                print(f"Prediction stats: {pred_stats}")
-                print(f"Confusion matrix:\n{conf_matr}")
+                    precision = np.array([conf_matr[i][i] / conf_matr.sum(axis=0)[i] for i in range(len(outputs_stats["pred_count"]))])
+                    recall = np.array([conf_matr[i][i] / conf_matr[i].sum() for i in range(len(outputs_stats["pred_count"]))])
+                    [pred_stats[opt].append({"pr": "%.2f"%(precision[i]), "rc": "%.2f"%(recall[i])}) for i, opt in enumerate(sorted(outputs_stats["pred_count"]))]
+                    print(f"Prediction stats: {pred_stats}")
+                    print(f"Confusion matrix:\n{conf_matr}")
 
-                # Dump outputs, accuracy and f1 for analysis
-                result_data = {
-                    "time": str(dt.datetime.today()).split(".")[0],
-                    "config": OmegaConf.to_container(cfg, resolve=True),
-                    "outputs": outputs,
-                    "accuracy": accuracy,
-                    "f1": f1,
-                    "pruned_exp": model_loader.data_cleaner.pruned_exp,
-                    "pred_stats": pred_stats,
-                    "lab_pos_stats": lab_pos_stats,
-                    "precision": precision.tolist(),
-                    "recall": recall.tolist(),
-                }
-                with open(f"{model_path}/outputs{'_exp' if include_exp else ''}_{i+1}.json", "w") as f:
-                    json.dump(result_data, f, indent=2)
+                    # Dump outputs, accuracy and f1 for analysis
+                    result_data = {
+                        "time": str(dt.datetime.today()).split(".")[0],
+                        "config": OmegaConf.to_container(cfg, resolve=True),
+                        "prompt_idx": prompt_idx,
+                        "outputs": outputs,
+                        "accuracy": accuracy,
+                        "f1": f1,
+                        "pruned_exp": model_loader.data_cleaner.pruned_exp,
+                        "pred_stats": pred_stats,
+                        "lab_pos_stats": lab_pos_stats,
+                        "precision": precision.tolist(),
+                        "recall": recall.tolist(),
+                    }
+                    with open(f"{model_path}/outputs{'_exp' if include_exp else ''}_{i+1}-{prompt_idx+1}.json", "w") as f:
+                        json.dump(result_data, f, indent=2)
 
         end_time_run = time.time() - start_time_run
         print(f"--- run {run} completed in {end_time_run:.2f} seconds ---")

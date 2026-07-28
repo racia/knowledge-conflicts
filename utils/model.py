@@ -43,11 +43,12 @@ class ModelLoader:
         available_models = (
             "meta-llama/Meta-Llama-3-8B-Instruct",
             "meta-llama/Llama-3.1-8B-Instruct",
-            "meta-llama/Llama-3.3-70B-Instruct",
+            "meta-llama/Llama-3.1-70B-Instruct",
             "gemini-2.5-flash-lite",
             "aaditya/OpenBioLLM-Llama3-8B",
             "Qwen/Qwen2.5-7B-Instruct",
             "mistralai/Mistral-7B-Instruct-v0.3",
+            "Qwen/Qwen3-32B"
         )
         if model_name not in available_models:
             raise ValueError(f"Model '{model_name}' is not supported. Available models: {available_models}")
@@ -99,7 +100,7 @@ class ModelLoader:
             print(f"Model with name {model_name} not found.")
 
 
-    def prepare_prompt(self, task_type: str, prompt_path: Path, sys_prompt: str = None, processed: dict = None, exp_str: str = None, shuffle_order: bool = False) -> str:
+    def prepare_prompt(self, task_type: str, prompt_path: Path, sys_prompt: str = None, processed: dict = None, exp_str: str = None, exp_upd_str: str = None, shuffle_order: bool = False) -> str:
         """
         Prepare the prompt for question formatting by combining the formatted examples.
 
@@ -124,12 +125,16 @@ class ModelLoader:
                 # print(f"Original base prompt: {base_prompt}")
                 cleaned_exp = self.data_cleaner.clean_exp_with_cop(exp_str, processed.get(
                         f"op{chr(ord('a')+processed['cop_new']-1)}", ""
-                        )) 
+                        )) if exp_str else ""
+                print(f"Cop_new: {processed.get('cop_new', '')}, Cop_upd: {processed.get('cop_upd', '')}")
+                cleaned_exp = self.data_cleaner.clean_exp_with_cop(exp_upd_str, processed.get(
+                        f"op{chr(ord('a')+processed['cop_upd']-1)}", ""
+                        )) if exp_upd_str else exp_str  # TODO: Adapt to exp_upd for later differentiation
                 options = [processed.get(f"opa", ""), processed.get(f"opb", ""), processed.get(f"opc", ""), processed.get(f"opd", "")]
                 option_labels = ['A', 'B', 'C', 'D']
                 base_prompt = base_prompt.format(
-                    question=processed.get("question", ""),
-                    context= cleaned_exp if exp_str else "", 
+                    question=processed.get("question_upd", ""),
+                    context=cleaned_exp if (exp_str or exp_upd_str) else "", # TODO: Extend to simultaneous use of exp_str and exp_upd_str
                     opa=options[0],
                     opb=options[1],
                     opc=options[2],
@@ -233,6 +238,7 @@ class ModelLoader:
             tokenizer,
             inputs: dict,
             temperature: float = 0.1,
+            max_len: int = None,
     ) -> str:
         """
         Generate text using the provided model and tokenizer.
@@ -246,7 +252,7 @@ class ModelLoader:
             inputs = {k: v.to(model.device) for k, v in inputs.items()}
             input_len = inputs['input_ids'].shape[1]
             # allow generation of up to 20% more tokens than the input length
-            max_len = int(input_len+input_len * 0.2)
+            max_len = int(input_len+input_len * 0.2) if not max_len else max_len
             with autocast("cuda"):
                 outputs = model.generate(
                     **inputs,

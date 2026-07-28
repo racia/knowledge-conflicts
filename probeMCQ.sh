@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
 #SBATCH --job-name=probeMC
-#SBATCH --output=probeMC_out_R
-#SBATCH --error=probeMC_err_R
+#SBATCH --output=probeMC_out_%j
+#SBATCH --error=probeMC_err-%j
 # SBATCH --partition=students
 # SBATCH --ntasks=1
 #SBATCH --time=00:15:00

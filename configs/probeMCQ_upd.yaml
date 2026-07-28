@@ -24,19 +24,20 @@ data:
   num_samples: -1 # -1 for all samples, otherwise specify the number of samples to use from the partition
   shuffle_cop: true
   shuffle_order: false
-  cop_key: false
+  cop_key: "cop_upd"
 
 task:
   name: "question-answering"
   type: "MCQA"
   prompt: 
-    - "utils/prompts/mcq1.txt"
+    - "utils/prompts/mcq_context.txt"
     # - "utils/prompts/mcq2.txt"
     # - "utils/prompts/mcq3.txt"
+
   prompt_variance: true
 
 mcq:
-  exp: false
+  exp: true
   # exp_only: true
   # overwrite: true
   # allow_inv_mod_answ: true
@@ -46,7 +47,7 @@ mcq:
   # save_mod_explanations: true
 
 outputs:
-  path: "outputs/probeMCQ"
+  path: "outputs/probeMCQ_exp-upd"
   print_to_file: true
   file_per_model: true
   clock_time: true

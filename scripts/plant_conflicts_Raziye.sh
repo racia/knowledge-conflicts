@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
 #SBATCH --job-name=plant_q
-#SBATCH --output=planting_q_out_R
-#SBATCH --error=planting_q_err_R
+#SBATCH --output=planting_out-%j
+#SBATCH --error=planting_err-%j
 # SBATCH --partition=students
 #SBATCH --ntasks=1
-#SBATCH --time=08:00:00
+#SBATCH --time=24:00:00
 #SBATCH --cpus-per-task=4
 #SBATCH --gres=gpu:2
 # SBATCH --nodelist=gpu09
@@ -34,13 +34,13 @@ echo "Activating conda env..."
 export CUDA_VISIBLE_DEVICES=${SLURM_JOB_GPUS:-}
 export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,expandable_segments:True"
 
-conda activate kc
-SCRIPT="conflict_planting.py"
+conda activate kc1
+SCRIPT="planting/conflict_planting.py"
 
 splits=(train)  # possible values: dev, test, train
 source="cleaned" # classical: "original/clean_spaces_id", for explanations: "cleaned"
 
-declare -a CONFIGS=("$PWD/configs/confl_plant_4.yaml")
+declare -a CONFIGS=("$PWD/configs/confl_plant_1.yaml")
 #task="question"  # question, classification, explanation
 
 echo "Running conflict planting with the following configurations: ${CONFIGS[*]}"
