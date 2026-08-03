@@ -5,6 +5,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers import BitsAndBytesConfig
 from torch.amp import autocast
 import torch
+import gc
 import logging
 
 import transformers
@@ -36,12 +37,14 @@ class ModelLoader:
                         - "meta-llama/Llama-3.3-70B-Instruct".
         :return: A tuple containing the model and tokenizer.
         """
+
         model, tokenizer, pipeline = None, None, None
         if not torch.cuda.is_available():
             raise EnvironmentError("CUDA is not available. A GPU is required to load the model.")
 
         available_models = (
             "meta-llama/Meta-Llama-3-8B-Instruct",
+            "meta-llama/Meta-Llama-3-70B-Instruct",
             "meta-llama/Llama-3.1-8B-Instruct",
             "meta-llama/Llama-3.1-70B-Instruct",
             "gemini-2.5-flash-lite",
@@ -72,6 +75,8 @@ class ModelLoader:
                 "offload_state_dict": True,
                 "offload_buffers": True,
             }
+            gc.collect()
+            torch.cuda.reset_peak_memory_stats()
             torch.cuda.empty_cache() # Clear GPU memory before loading the model to ensure maximum available memory for the model loading process
 
             # Add memory tracking

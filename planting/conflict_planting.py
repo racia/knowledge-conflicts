@@ -279,14 +279,16 @@ if __name__ == "__main__":
         processed_count = check_existing_generated_data(split, conf, data_part)
         data_portion = data_part[processed_count:conf.data.num_samples] if conf.data.num_samples > 0 else data_part[processed_count:]
         print(f"Processing {len(data_portion)} of {len(data_part)} instances in the partitioned data.")
-        
+        question_data_list = [json.loads(line) for line in data_portion]
+        single_questions = [q for q in question_data_list if q.get("choice_type", "") == "single"]
+        print(f"Total single-choice questions in the partitioned data: {len(single_questions)}
+
         generated_data = []
         count = 0
         if not data_portion:
             print(f"No data was partitioned, exiting..")
         else:
-            for i, line in enumerate(data_portion):
-                question_data = json.loads(line)
+            for i, question_data in enumerate(single_questions):
                 id = question_data.get("id", "")
                 exp_to_edit = question_data.get("exp_to_edit", "")
                 if not exp_to_edit:
