@@ -249,8 +249,9 @@ if __name__ == "__main__":
                     #samples[re.split(r"\w(?=\d)", data_file)[1][0]] = [json.loads(line) for line in f]
                     samples += [json.loads(line) for line in f]
             print(f"Samples loaded: {len(samples)}")
-            samples = [s_dict for s_dict in samples if s_dict.get("choice_type") == "single"] # Filter for single choice samples
-            print(f"Samples filtered for single choice: {len(samples)}")
+            if cfg.data.single_choice:
+                samples = [s_dict for s_dict in samples if s_dict.get("choice_type") == "single"] # Filter for single choice samples
+                print(f"Samples filtered for single choice: {len(samples)}")
             cfg.model.name = model_name
             # Model configuration
             model_loader = ModelLoader(load_model=model_name, load_tokenizer=cfg.model.load_tokenizer, load_pipeline=cfg.model.load_pipeline)

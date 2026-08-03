@@ -7,7 +7,7 @@ data:
   path: "data/MedMCQA"
   num_parts: 4 # Number of data partitions, which amounts to 45707 samples per partition for train split.
   part_idx: 1
-  num_samples: 20 # -1 for all samples, otherwise specify the number of samples to use from the partition
+  num_samples: -1 # -1 for all samples, otherwise specify the number of samples to use from the partition
 
 task:
   name: "conflict_planting"
