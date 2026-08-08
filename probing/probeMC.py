@@ -48,7 +48,7 @@ def process_samples(samples, shuffle_cop: bool = True, cop_key: str = "cop"):
             "id": sample["id"],
             "question_upd": sample["question_upd"],
             "exp": sample["exp"], # TODO: Applicability to exp(_upd)
-            "exp_upd": sample["exp_upd"],
+            "exp_upd": sample["mod_context"],
             "opa": sample[f"op{rand_op_idx}"] if "a" == org_cop else rem_op_ans[0],
             "opb": sample[f"op{rand_op_idx}"] if "b" == org_cop else rem_op_ans[1],
             "opc": sample[f"op{rand_op_idx}"] if "c" == org_cop else rem_op_ans[2],
@@ -59,7 +59,7 @@ def process_samples(samples, shuffle_cop: bool = True, cop_key: str = "cop"):
             "id": sample["id"],
             "question_upd": sample["question_upd"],
             "exp": sample["exp"],
-            "exp_upd": sample["exp_upd"],
+            "exp_upd": sample["mod_context"],
             "opa": sample["opa"],
             "opb": sample["opb"],
             "opc": sample["opc"],

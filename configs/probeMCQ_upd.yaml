@@ -14,9 +14,9 @@ model:
 data:
   path: "data/MedMCQA/synthetic"
   file_name: 
-    - "train_conflict_planted.jsonl"
+    # - "train_conflict_planted.jsonl"
     - "train_conflict_planted_1.jsonl"
-    - "train_conflict_planted_4.jsonl"
+    # - "train_conflict_planted_4.jsonl"
     # - "train_conflict_planted_3.jsonl"
 
   #num_parts: 4 # Number of data partitions, which amounts to 45707 samples per partition for train split.
@@ -24,6 +24,7 @@ data:
   num_samples: -1 # -1 for all samples, otherwise specify the number of samples to use from the partition
   shuffle_cop: true
   shuffle_order: false
+  single_choice: true
   cop_key: "cop_upd"
 
 task:
@@ -47,7 +48,7 @@ mcq:
   # save_mod_explanations: true
 
 outputs:
-  path: "outputs/probeMCQ_exp-upd"
+  path: "outputs/probeMCQ_exp-mod"
   print_to_file: true
   file_per_model: true
   clock_time: true

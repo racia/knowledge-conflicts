@@ -47,7 +47,7 @@ SCRIPT="probeMC.py"
 # splits=(train)  # possible values: dev, test, train
 # source="cleaned" # classical: "original/clean_spaces_id", for explanations: "cleaned"
 
-declare -a CONFIGS=("$PWD/configs/probeMCQ-exp.yaml") # TODO: configure
+declare -a CONFIGS=("$PWD/configs/probeMCQ_upd.yaml") # TODO: configure
 #task="question"  # question, classification, explanation
 
 if [ ${#CONFIGS[@]} -eq 0 ]; then

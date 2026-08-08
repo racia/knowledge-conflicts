@@ -6,7 +6,7 @@
 # SBATCH --partition=students
 #SBATCH --ntasks=1
 #SBATCH --time=00:29:29
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=2
 #SBATCH --gres=gpu:2
 # SBATCH --nodelist=gpu09
 # SBATCH --mem-per-gpu=10G
@@ -44,7 +44,7 @@ declare -a CONFIGS=("$PWD/configs/confl_plant_1.yaml")
 #task="question"  # question, classification, explanation
 
 echo "Running conflict planting with the following configurations: ${CONFIGS[*]}"
-srun python3 "$SCRIPT" --splits "${splits[@]}" --source "$source" --config "${CONFIGS[@]}"
+srun python "$SCRIPT" --splits "${splits[@]}" --source "$source" --config "${CONFIGS[@]}"
 
 if [ $? -eq 0 ]; then
     echo "Python script conflict_planting.py executed successfully."
