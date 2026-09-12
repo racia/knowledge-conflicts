@@ -42,7 +42,7 @@ export CUDA_VISIBLE_DEVICES=${SLURM_JOB_GPUS:-}
 export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,expandable_segments:True"
 
 conda activate kc1
-SCRIPT="probeMC.py"
+SCRIPT="probing/probeMC.py"
 
 # splits=(train)  # possible values: dev, test, train
 # source="cleaned" # classical: "original/clean_spaces_id", for explanations: "cleaned"
