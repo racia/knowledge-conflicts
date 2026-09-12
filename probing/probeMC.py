@@ -11,6 +11,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
 
 import tracemalloc
 import sys
+import gc
 
 from transformers import pipeline
 # Configure parent folder for imports
@@ -108,60 +109,61 @@ def extract_choice(text):
 
 
 def run_model(prompt, model=None, tokenizer=None, pipeline=None):
-    with torch.no_grad():
-        full_prompt = prompt.split("\\n\\n", 1)
-        # print(f"Full prompt, ", full_prompt)
-        if not pipeline:
-            model_inputs = tokenizer.apply_chat_template(
-                [{"role": "system", "content": full_prompt[0], "name": "system"},
-                {"role": "user", "content": full_prompt[1], "name": "user"}],
-                add_generation_prompt=cfg.model.add_generation_prompt, # TODO: What with True for start generation?
-                tokenize=cfg.model.tokenize,
-                return_dict=True,
-                return_tensors="pt",
-            ).to(model.device)
+    with torch.inference_mode():
+        # Handle string prompt splitting cleanly
+        parts = prompt.split("\n\n", 1) if "\n\n" in prompt else prompt.split("\\n\\n", 1)
+        sys_content = parts[0] if len(parts) > 1 else ""
+        user_content = parts[1] if len(parts) > 1 else parts[0]
 
-        elif pipeline:
-            model_inputs = pipeline.tokenizer.apply_chat_template(
-                [{"role": "system", "content": full_prompt[0]},
-                 {"role": "user", "content": full_prompt[1]}],
-            tokenize = False,
-            add_generation_prompt=True,
-            # return_tensors="pt"
+        if pipeline:
+            formatted_prompt = pipeline.tokenizer.apply_chat_template(
+                [{"role": "system", "content": sys_content},
+                 {"role": "user", "content": user_content}],
+                tokenize=False,
+                add_generation_prompt=True,
             )
             terminators = [
                 pipeline.tokenizer.eos_token_id,
                 pipeline.tokenizer.convert_tokens_to_ids("<|eot_id|>")
             ]
-            model_inputs = tokenizer([model_inputs], return_tensors="pt").to(model.device)
-        
-        prompt_str = tokenizer.decode(model_inputs["input_ids"][0], skip_special_tokens=True)
-        input_length = model_inputs["input_ids"].shape[1]#, skip_special_tokens=True)
-        try:
-            assert len(prompt_str) == input_length
-        except:
-            # print(f"Length mismatch of Prompt str: {len(prompt_str), prompt_str[:5], prompt_str[-5:]} with input length: {input_length}") # Input length around 4* smaller
-            pass
-        with torch.autocast("cuda"):
-            if pipeline:
+            with torch.autocast("cuda"):
                 outputs = pipeline(
-                    prompt, # Chat says to use input_ids, but pipeline expects str input
+                    formatted_prompt,
                     max_new_tokens=256,
                     eos_token_id=terminators,
                     do_sample=True,
                     temperature=0.0,
                     top_p=0.9,
-                )                
-            else:
-                outputs = model.generate(
-                    **model_inputs,
-                    max_new_tokens=10,
-                    temperature=0.7,
-                    do_sample=False, # For deterministic outputs
                 )
-        decoded = tokenizer.decode(outputs[0], skip_special_tokens=True) 
-        print("original model output: ", decoded)
-        return decoded[len(prompt_str):].strip()
+            generated_text = outputs[0]["generated_text"]
+            # Extract new text after formatted_prompt
+            return generated_text[len(formatted_prompt):].strip()
+
+        # Direct model generation mode
+        model_inputs = tokenizer.apply_chat_template(
+            [{"role": "system", "content": sys_content},
+             {"role": "user", "content": user_content}],
+            add_generation_prompt=cfg.model.add_generation_prompt,
+            tokenize=True,
+            return_dict=True,
+            return_tensors="pt",
+        ).to(model.device)
+
+        input_length = model_inputs["input_ids"].shape[1]
+
+        with torch.autocast("cuda"):
+            outputs = model.generate(
+                **model_inputs,
+                max_new_tokens=10,
+                temperature=0.7,
+                do_sample=False,
+            )
+
+        # Slice generated token IDs directly before decoding
+        new_tokens = outputs[0][input_length:]
+        decoded_output = tokenizer.decode(new_tokens, skip_special_tokens=True)
+        print("original model output: ", decoded_output)
+        return decoded_output.strip()
     
 
 def evaluate(task, prompt: str, samples, model=None, tokenizer=None, pipeline=None, shuffle_order: bool = False, cop_key: str = "cop_new"):
@@ -237,7 +239,7 @@ if __name__ == "__main__":
     for run in range(runs):
         start_time_run = time.time()
 
-        print(f"Starting run {run}/{runs}")
+        print(f"Starting run {run+1}/{runs}")
         run_path = Path(outputs_path, f"run{run}")
         Path.mkdir(run_path, parents=True, exist_ok=True)
         
@@ -267,10 +269,9 @@ if __name__ == "__main__":
                 print(f"Loading data from {data_file}...")
                 with open(data_file, "r") as f: # Save for each data file in case of multiple files
                     samples += [json.loads(line) for line in f]
-            print(f"Samples loaded: {len(samples)}")
             if cfg.data.single_choice:
                 samples = [s_dict for s_dict in samples if s_dict.get("choice_type") == "single"] # Filter for single choice samples
-                print(f"Samples filtered for single choice: {len(samples)}")
+                print(f"Samples loaded and filtered for single choice: {len(samples)}")
             num_samples = cfg.data.num_samples
             if num_samples != -1:
                 samples = samples[:num_samples]
@@ -341,6 +342,11 @@ if __name__ == "__main__":
                 }
                 with open(f"{model_path}/outputs{'_exp' if include_exp else ''}_{i+1}.json", "w") as f:
                     json.dump(result_data, f, indent=2)
+
+            # Clean up GPU memory before moving to the next model
+            del model, tokenizer, pipeline, model_loader
+            gc.collect()
+            torch.cuda.empty_cache()
 
         end_time_run = time.time() - start_time_run
         print(f"--- run {run} completed in {end_time_run:.2f} seconds ---")
