@@ -201,6 +201,11 @@ def evaluate(task, prompt: str, samples, model=None, tokenizer=None, pipeline=No
             "gold_choice": gold_choice,        
         })
 
+        # Write outputs directly to JSONL after each sample
+        output_file = Path(run_path, f"output.jsonl")
+        with open(output_file, "a") as f:
+            f.write(json.dumps(outputs[-1]) + "\n")
+
     outputs_stats = {"pred_count": pred_count,
                     "gold_count": gold_count, 
                     "inv_outputs": none_counter,
