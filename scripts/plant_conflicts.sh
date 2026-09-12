@@ -37,7 +37,7 @@ export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,expandable_segments:True"
 splits=(train)  # possible values: dev, test, train
 source="cleaned" # classical: "original/clean_spaces_id", for explanations: "cleaned"
 #task="question"  # question, classification, explanation
-srun python3 conflict_planting.py --splits "${splits[@]}" --source "$source"
+srun python3 planting/conflict_planting.py --splits "${splits[@]}" --source "$source"
 
 if [ $? -eq 0 ]; then
     echo "Python script conflict_planting.py executed successfully."

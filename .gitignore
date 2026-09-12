@@ -6,6 +6,8 @@ outputs/
 *_out.txt
 *_out*
 *_err*
+*.out
+*.err
 
 # Ignore log files
 *.log

@@ -25,7 +25,7 @@ data:
   single_choice: true
   shuffle_cop: true
   shuffle_order: false
-  cop_key: false
+  cop_key: "cop" # "cop" for original cop, "cop_upd" for conflicting cop, "cop" for inter-conflict setting
 
 task:
   type: "MCQA"
@@ -33,15 +33,17 @@ task:
   prompt: 
     - "utils/prompts/mcq_context.txt"
     # - ""
-mcq:
-  exp: true
-  # exp_only: true
-  # overwrite: true
-  # allow_inv_mod_answ: true
-  # allow_id_mod_answ: false
-  # save_mod_questions: false
-  # save_mod_answers: true
-  # save_mod_explanations: true
+  mcq:
+    exp: true
+    exp_upd: false
+    setting: "default"
+    # exp_only: true
+    # overwrite: true
+    # allow_inv_mod_answ: true
+    # allow_id_mod_answ: false
+    # save_mod_questions: false
+    # save_mod_answers: true
+    # save_mod_explanations: true
 
 outputs:
   path: "outputs/probeMCQ_exp"

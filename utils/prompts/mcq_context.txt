@@ -1,6 +1,6 @@
 \n\nYou will receive Medical MCQ. Please answer correctly from the provided options. Adhere to the below format specification:\n
 Question: {question}
-Context: {context}
+Context: {context}{context_upd}
 A. {opa}
 B. {opb}
 C. {opc}

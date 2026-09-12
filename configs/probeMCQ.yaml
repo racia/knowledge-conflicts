@@ -24,7 +24,7 @@ data:
   num_samples: -1 # -1 for all samples, otherwise specify the number of samples to use from the partition
   shuffle_cop: true
   shuffle_order: false
-  cop_key: false
+  cop_key: "cop" # "cop" for original cop, "cop_upd" for conflicting cop, "cop" for inter-conflict setting
 
 task:
   name: "question-answering"
@@ -34,16 +34,17 @@ task:
     # - "utils/prompts/mcq2.txt"
     # - "utils/prompts/mcq3.txt"
   prompt_variance: true
-
-mcq:
-  exp: false
-  # exp_only: true
-  # overwrite: true
-  # allow_inv_mod_answ: true
-  # allow_id_mod_answ: false
-  # save_mod_questions: false
-  # save_mod_answers: true
-  # save_mod_explanations: true
+  mcq:
+    exp: false
+    exp_upd: false
+    setting: "default"
+    # exp_only: true
+    # overwrite: true
+    # allow_inv_mod_answ: true
+    # allow_id_mod_answ: false
+    # save_mod_questions: false
+    # save_mod_answers: true
+    # save_mod_explanations: true
 
 outputs:
   path: "outputs/probeMCQ"

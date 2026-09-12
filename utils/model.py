@@ -132,14 +132,15 @@ class ModelLoader:
                         f"op{chr(ord('a')+processed['cop_new']-1)}", ""
                         )) if exp_str else ""
                 print(f"Cop_new: {processed.get('cop_new', '')}, Cop_upd: {processed.get('cop_upd', '')}")
-                cleaned_exp = self.data_cleaner.clean_exp_with_cop(exp_upd_str, processed.get(
+                cleaned_exp_upd = self.data_cleaner.clean_exp_with_cop(exp_upd_str, processed.get(
                         f"op{chr(ord('a')+processed['cop_upd']-1)}", ""
-                        )) if exp_upd_str else exp_str  # TODO: Adapt to exp_upd for later differentiation
+                        )) if exp_upd_str else ""  # TODO: Adapt to exp_upd for later differentiation
                 options = [processed.get(f"opa", ""), processed.get(f"opb", ""), processed.get(f"opc", ""), processed.get(f"opd", "")]
                 option_labels = ['A', 'B', 'C', 'D']
                 base_prompt = base_prompt.format(
                     question=processed.get("question_upd", ""),
-                    context=cleaned_exp if (exp_str or exp_upd_str) else "", # TODO: Extend to simultaneous use of exp_str and exp_upd_str
+                    context=cleaned_exp if exp_str else "", 
+                    context_upd="\n"+cleaned_exp_upd if exp_upd_str else "", # TODO: Check simultaneous use
                     opa=options[0],
                     opb=options[1],
                     opc=options[2],
@@ -154,7 +155,7 @@ class ModelLoader:
                     combined = list(zip(options, option_labels))
                     random.shuffle(combined)
                     shuffled_options, shuffled_labels = zip(*combined)
-                    lab_A = shuffled_labels.index('A') # TODO: LAter for token bias
+                    lab_A = shuffled_labels.index('A') # TODO: Later for token bias
                     first_lab = shuffled_labels[0]
                     last_lab = shuffled_labels[-1]
                     base_prompt = "\n".join((intr, ques_cont[0], "\n".join([f"{label}. {option}" for label, option in zip(shuffled_labels, shuffled_options)]), instr))
