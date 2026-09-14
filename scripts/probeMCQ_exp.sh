@@ -3,11 +3,13 @@
 #SBATCH --job-name=probeMC
 #SBATCH --output=probeMC_out-%j
 #SBATCH --error=probeMC_err-%j
-# SBATCH --partition=students
-# SBATCH --ntasks=1
+#SBATCH --partition=students
+#SBATCH --ntasks=1
+#SBATCH --nodelist=gpu08
+#SBATCH --mem=64G
 #SBATCH --time=00:29:29 #(~15 min for 1.7k sampples * 3 models)
 #SBATCH --cpus-per-task=2
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:1
 #SBATCH --mail-user=sari@cl.uni-heidelberg.de
 #SBATCH --mail-type=ALL
 
@@ -41,7 +43,8 @@ echo "Activating conda env..."
 export CUDA_VISIBLE_DEVICES=${SLURM_JOB_GPUS:-}
 export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,expandable_segments:True"
 
-conda activate kc1
+#conda activate kc #1
+source .venv/bin/activate
 SCRIPT="probing/probeMC.py"
 
 # splits=(train)  # possible values: dev, test, train
@@ -55,7 +58,7 @@ if [ ${#CONFIGS[@]} -eq 0 ]; then
     srun python3.11 "$SCRIPT"
 else
     echo "Running probeMC with the following configurations: ${CONFIGS[*]}"
-    srun python3.11 "$SCRIPT" --config "${CONFIGS[@]}"
+    srun uv run python3.11 "$SCRIPT" --config "${CONFIGS[@]}"
 fi
 
 if [ $? -eq 0 ]; then
@@ -66,4 +69,4 @@ else
 fi
 
 echo "ProbeMC job completed."
-conda deactivate
+#conda deactivate

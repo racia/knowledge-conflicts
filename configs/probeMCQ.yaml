@@ -30,8 +30,7 @@ data:
 task:
   name: "question-answering"
   type: "MCQA"
-  prompt: 
-    - "utils/prompts/mcq1.txt"
+  prompt: "utils/prompts/mcq1.txt"
     # - "utils/prompts/mcq2.txt"
     # - "utils/prompts/mcq3.txt"
   prompt_variance: true
