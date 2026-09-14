@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
 #SBATCH --job-name=probeMC
-#SBATCH --output=probeMC_out
-#SBATCH --error=probeMC_err
-#SBATCH --partition=students
+#SBATCH --output=probeMC_out-%j
+#SBATCH --error=probeMC_err-%j
+# SBATCH --partition=students
 #SBATCH --ntasks=1
-# SBATCH --time=00:15:00
+#SBATCH --time=00:29:29
 #SBATCH --mem=128G
 #SBATCH --cpus-per-task=2
 #SBATCH --gres=gpu:2

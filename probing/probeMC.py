@@ -91,16 +91,16 @@ def process_samples(samples, shuffle_cop: bool = True, cop_key: str = "cop"):
     return processed
 
 
-def build_prompt(task_type: str, include_exp: bool, prompt: str, sys_prompt, sample, shuffle_order: bool = False, exp_upd: bool = False, conf_exp: bool = False):
+def build_prompt(task_type: str, include_exp: bool, prompt_path: str, sys_prompt, sample, shuffle_order: bool = False, exp_upd: bool = False, conf_exp: bool = False):
     if include_exp:
         exp_str = sample.get("exp", "") if (not exp_upd or conf_exp) else ""
         exp_upd_str = sample.get("exp_upd", "") if (not exp_str or conf_exp) else "" # Modified, synthetic pseudo-explanation
         if (exp_upd_str and exp_str) and (exp_upd_str != exp_str):
             # Inter-Conflict setting
-            return model_loader.prepare_prompt(task_type, prompt, sys_prompt=sys_prompt, processed=sample, exp_str=exp_str, exp_upd_str=exp_upd_str, shuffle_order=shuffle_order)
+            return model_loader.prepare_prompt(task_type, prompt_path, sys_prompt=sys_prompt, processed=sample, exp_str=exp_str, exp_upd_str=exp_upd_str, shuffle_order=shuffle_order)
         elif exp_upd_str:
-            return model_loader.prepare_prompt(task_type, prompt, sys_prompt=sys_prompt, processed=sample, exp_str=exp_str, exp_upd_str=exp_upd_str, shuffle_order=shuffle_order)
-    return model_loader.prepare_prompt(task_type, prompt, sys_prompt=sys_prompt, processed=sample, shuffle_order=shuffle_order)
+            return model_loader.prepare_prompt(task_type, prompt_path, sys_prompt=sys_prompt, processed=sample, exp_str=exp_str, exp_upd_str=exp_upd_str, shuffle_order=shuffle_order)
+    return model_loader.prepare_prompt(task_type, prompt_path, sys_prompt=sys_prompt, processed=sample, shuffle_order=shuffle_order)
 
 
 def extract_choice(text):
@@ -166,13 +166,13 @@ def run_model(prompt, model=None, tokenizer=None, pipeline=None):
         return decoded_output.strip()
     
 
-def evaluate(task, prompt: str, samples, model=None, tokenizer=None, pipeline=None, shuffle_order: bool = False, cop_key: str = "cop_new"):
+def evaluate(task, prompt_path: str, samples, model=None, tokenizer=None, pipeline=None, shuffle_order: bool = False, cop_key: str = "cop_new"):
     gold, preds, outputs = [], [], []
     gold_count, pred_count, labels_stats = defaultdict(int), defaultdict(int), defaultdict(lambda: defaultdict(int))
     none_counter = 0
     sys_prompt = "You are a helpful and precise medical assistant for answering multiple-choice questions. Always think step by step."
     for i, sample in enumerate(samples):
-        prompt, (first_lab, last_lab) = build_prompt(task_type=task.type, include_exp=task.mcq.exp, prompt=prompt, sys_prompt=sys_prompt, sample=sample, shuffle_order=shuffle_order, exp_upd=task.mcq.exp_upd, conf_exp=True if task.mcq.setting == "inter-conflict" else False,)
+        prompt, (first_lab, last_lab) = build_prompt(task_type=task.type, include_exp=task.mcq.exp, prompt_path=prompt_path, sys_prompt=sys_prompt, sample=sample, shuffle_order=shuffle_order, exp_upd=task.mcq.exp_upd, conf_exp=True if task.mcq.setting == "inter-conflict" else False,)
         labels_stats[first_lab]["first"] += 1
         labels_stats[last_lab]["last"] += 1
         sys_prompt = None
@@ -200,6 +200,11 @@ def evaluate(task, prompt: str, samples, model=None, tokenizer=None, pipeline=No
             "pred_choice": pred_choice,
             "gold_choice": gold_choice,        
         })
+
+        # Write outputs directly to JSONL after each sample
+        # output_file = Path(run_path, f"output.jsonl")
+        # with open(output_file, "a") as f:
+        #     f.write(json.dumps(outputs[-1]) + "\n")
 
     outputs_stats = {"pred_count": pred_count,
                     "gold_count": gold_count, 

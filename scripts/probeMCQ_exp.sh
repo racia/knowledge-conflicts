@@ -5,7 +5,7 @@
 #SBATCH --error=probeMC_err-%j
 #SBATCH --partition=students
 #SBATCH --ntasks=1
-#SBATCH --nodelist=gpu08
+# SBATCH --nodelist=gpu08
 #SBATCH --mem=64G
 #SBATCH --time=00:29:29 #(~15 min for 1.7k sampples * 3 models)
 #SBATCH --cpus-per-task=2
@@ -50,7 +50,7 @@ SCRIPT="probing/probeMC.py"
 # splits=(train)  # possible values: dev, test, train
 # source="cleaned" # classical: "original/clean_spaces_id", for explanations: "cleaned"
 
-declare -a CONFIGS=("$PWD/configs/probeMCQ_upd.yaml") # TODO: configure
+declare -a CONFIGS=("$PWD/configs/probeMCQ-exp.yaml") # !!! --- ATTENTION --- !!!: configure for default or modified settings
 #task="question"  # question, classification, explanation
 
 if [ ${#CONFIGS[@]} -eq 0 ]; then

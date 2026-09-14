@@ -1,0 +1,59 @@
+[project]
+name = "knowledge-conflicts"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "accelerate>=1.15.0",
+    "jsonlines>=4.0.0",
+    "omegaconf>=2.3.1",
+    "scikit-learn>=1.7.2",
+    "transformers>=5.17.0",
+]
+
+# Code below stolen from https://docs.astral.sh/uv/guides/integration/pytorch/#configuring-accelerators-with-optional-dependencies
+[project.optional-dependencies]
+cpu = [
+    "accelerate>=1.13.0",
+    "torch>=2.10.0",
+]
+gpu = [
+    "accelerate>=1.13.0",
+    "torch>=2.10.0",
+]
+oldgpu = [
+    "accelerate>=1.13.0",
+    "torch>=2.10.0",
+]
+
+[tool.uv]
+conflicts = [
+  [
+    { extra = "cpu" },
+    { extra = "gpu" },
+    { extra = "oldgpu" },
+  ],
+]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu", extra = "cpu" },
+  { index = "pytorch-gpu", extra = "gpu" },
+  { index = "pytorch-oldgpu", extra = "oldgpu" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-gpu"
+url = "https://download.pytorch.org/whl/cu129"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-oldgpu"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true

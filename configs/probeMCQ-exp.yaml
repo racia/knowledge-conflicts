@@ -1,5 +1,5 @@
-model: 
-  name: 
+model:
+  name:
     - "Qwen/Qwen2.5-7B-Instruct"
     - "meta-llama/Meta-Llama-3-8B-Instruct"
     - "mistralai/Mistral-7B-Instruct-v0.3"
@@ -13,12 +13,12 @@ model:
 
 data:
   path: "data/MedMCQA/synthetic"
-  file_name: 
-#    - "train_conflict_planted.jsonl" 
+  file_name:
+    # - "train_conflict_planted.jsonl" 
     - "train_conflict_planted_1.jsonl"
-#    - "train_conflict_planted_4.jsonl"
+    # - "train_conflict_planted_4.jsonl"
     # - "train_conflict_planted_3.jsonl"
-  
+
   #num_parts: 4 # Number of data partitions, which amounts to 45707 samples per partition for train split.
   #part_idx: 4
   num_samples: -1 # -1 for all samples, otherwise specify the number of samples to use from the partition
