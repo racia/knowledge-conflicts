@@ -100,6 +100,8 @@ def build_prompt(task_type: str, include_exp: bool, prompt_path: str, sys_prompt
             return model_loader.prepare_prompt(task_type, prompt_path, sys_prompt=sys_prompt, processed=sample, exp_str=exp_str, exp_upd_str=exp_upd_str, shuffle_order=shuffle_order)
         elif exp_upd_str:
             return model_loader.prepare_prompt(task_type, prompt_path, sys_prompt=sys_prompt, processed=sample, exp_str=exp_str, exp_upd_str=exp_upd_str, shuffle_order=shuffle_order)
+        else:
+            return model_loader.prepare_prompt(task_type, prompt_path, sys_prompt=sys_prompt, processed=sample, exp_str=exp_str, exp_upd_str=exp_upd_str, shuffle_order=shuffle_order)
     return model_loader.prepare_prompt(task_type, prompt_path, sys_prompt=sys_prompt, processed=sample, shuffle_order=shuffle_order)
 
 

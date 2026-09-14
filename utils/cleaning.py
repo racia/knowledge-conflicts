@@ -27,16 +27,24 @@ class DataCleaner:
         :param cop: The corresponding correct answer string
         :return: If matched, an answer-pruned explanation, otherwise original is returned
         """
-        print("Original explanation:", exp, "with cop:", cop)
+        # print("Original explanation:", exp, "with cop:", cop)
         assert cop not in ("", None), f"Detected empty-string cop, consider adjusting regex pattern."
         ans_exp_pat = r"^(Ans[.:]?|Answer-?)\s*(?:\s*is\.?\s*)?\s*\(?'?[A-Za-z]'?\)?"
+        leak_prompt_pat = r"here is the re-?written (text|explanation):\n"
+        leak_prompt_match = re.search(leak_prompt_pat, exp, re.IGNORECASE)
+        if leak_prompt_match:
+            print("Leak prompt detected:", leak_prompt_match.group(0))
+            exp = exp.replace(leak_prompt_match.group(0), "").lstrip()
+            self.pruned_exp += 1
         ans_exp_match = re.match(fr"{ans_exp_pat}(.*?){cop}", exp, re.DOTALL)
         if ans_exp_match:
             # print("Matched string: ", ans_exp_match.string)
-            exp_new = exp.replace(ans_exp_match.group(0), "").lstrip()
+            exp = exp.replace(ans_exp_match.group(0), "").lstrip()
             # print(f"Successfully cleaned exp: {exp_new}")
             self.pruned_exp += 1
-        return exp_new if ans_exp_match else exp
+        # Strip empty lines
+        exp = "\n".join([line for line in exp.splitlines() if line.strip()])
+        return exp
 
     @staticmethod
     def clean_data(self, base_dir: str, source: str, split: str, prompt: dict, task: str, model, tokenizer) -> None:
