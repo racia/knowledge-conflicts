@@ -5,7 +5,7 @@
 #SBATCH --error=probeMC_err-%j
 # SBATCH --partition=students
 # SBATCH --ntasks=1
-#SBATCH --time=00:15:00
+#SBATCH --time=00:29:00
 #SBATCH --cpus-per-task=2
 #SBATCH --gres=gpu:2
 #SBATCH --mail-user=sari@cl.uni-heidelberg.de
