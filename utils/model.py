@@ -105,7 +105,7 @@ class ModelLoader:
             print(f"Model with name {model_name} not found.")
 
 
-    def prepare_prompt(self, task_type: str, prompt_path: Path, sys_prompt: str = None, processed: dict = None, exp_str: str = None, exp_upd_str: str = None, shuffle_order: bool = False) -> str:
+    def prepare_prompt(self, task_type: str, prompt_path: Path, sys_prompt: str = None, processed: dict = None, exp_str: str = None, exp_upd_str: str = None, conf_exp: bool = False, shuffle_order: bool = False) -> str:
         """
         Prepare the prompt for question formatting by combining the formatted examples.
 
@@ -128,13 +128,16 @@ class ModelLoader:
             ans_opt_pattern = re.compile(r"[\w\s]+(?=[ABCD].)")
             if processed:
                 # print(f"Original base prompt: {base_prompt}")
+                print(f"Processed sample: {processed}, exp_str: {exp_str}, exp_upd_str: {exp_upd_str}")
                 cleaned_exp = self.data_cleaner.clean_exp_with_cop(exp_str, processed.get(
                         f"op{chr(ord('a')+processed['cop_new']-1)}", ""
                         )) if exp_str else ""
                 print(f"Cop_new: {processed.get('cop_new', '')}, Cop_upd: {processed.get('cop_upd', '')}")
                 cleaned_exp_upd = self.data_cleaner.clean_exp_with_cop(exp_upd_str, processed.get(
                         f"op{chr(ord('a')+processed['cop_upd']-1)}", ""
-                        )) if exp_upd_str else ""  # TODO: Adapt to exp_upd for later differentiation
+                        )) if conf_exp else ""  
+                print(f"Cleaned explanation: {cleaned_exp}")
+                print(f"Cleaned updated explanation: {cleaned_exp_upd}")
                 options = [processed.get(f"opa", ""), processed.get(f"opb", ""), processed.get(f"opc", ""), processed.get(f"opd", "")]
                 option_labels = ['A', 'B', 'C', 'D']
                 base_prompt = base_prompt.format(

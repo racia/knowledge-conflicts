@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 #
 #SBATCH --job-name=probeMC
-#SBATCH --output=probeMC_out-%j
-#SBATCH --error=probeMC_err-%j
-#SBATCH --partition=students
+#SBATCH --output=probeMC-conf_out-%j
+#SBATCH --error=probeMC-conf_err-%j
+# SBATCH --partition=students
 #SBATCH --ntasks=1
 # SBATCH --nodelist=gpu08
 #SBATCH --mem=64G
-#SBATCH --time=00:29:29 #(~15 min for 1.7k sampples * 3 models)
+# SBATCH --time=00:29:29 #(~15 min for 1.7k sampples * 3 models)
 #SBATCH --cpus-per-task=2
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:2
 #SBATCH --mail-user=sari@cl.uni-heidelberg.de
 #SBATCH --mail-type=ALL
 
@@ -50,7 +50,7 @@ SCRIPT="probing.probeMC"
 # splits=(train)  # possible values: dev, test, train
 # source="cleaned" # classical: "original/clean_spaces_id", for explanations: "cleaned"
 
-declare -a CONFIGS=("$PWD/configs/probeMCQ-exp.yaml") # !!! --- ATTENTION --- !!!: configure for default or modified settings
+declare -a CONFIGS=("$PWD/configs/probeMCQ-exp-conf.yaml") # !!! --- ATTENTION --- !!!: configure for default or modified settings
 #task="question"  # question, classification, explanation
 
 if [ ${#CONFIGS[@]} -eq 0 ]; then

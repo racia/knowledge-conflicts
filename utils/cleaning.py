@@ -28,6 +28,7 @@ class DataCleaner:
         :return: If matched, an answer-pruned explanation, otherwise original is returned
         """
         # print("Original explanation:", exp, "with cop:", cop)
+        print(exp, cop)
         assert cop not in ("", None), f"Detected empty-string cop, consider adjusting regex pattern."
         ans_exp_pat = r"^(Ans[.:]?|Answer-?)\s*(?:\s*is\.?\s*)?\s*\(?'?[A-Za-z]'?\)?"
         leak_prompt_pat = r"here is the re-?written (text|explanation):\n"

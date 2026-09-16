@@ -1,7 +1,7 @@
 model: 
   name: 
-    # - "Qwen/Qwen2.5-7B-Instruct"
-    # - "meta-llama/Meta-Llama-3-8B-Instruct"
+    - "Qwen/Qwen2.5-7B-Instruct"
+    - "meta-llama/Meta-Llama-3-8B-Instruct"
     - "mistralai/Mistral-7B-Instruct-v0.3"
   load_model: true
   load_tokenizer: true
@@ -10,34 +10,34 @@ model:
   add_generation_prompt: true # False for Llama
   load_pipeline: false
   enable_thinking: false # Default true for qwen 
-
-
+  
 data:
   path: "data/MedMCQA/synthetic"
   file_name: 
-    # - "train_conflict_planted.jsonl" 
+    # - "train_conflict_planted.jsonl"
     - "train_conflict_planted_1.jsonl"
     # - "train_conflict_planted_4.jsonl"
     # - "train_conflict_planted_3.jsonl"
-  
+
   #num_parts: 4 # Number of data partitions, which amounts to 45707 samples per partition for train split.
   #part_idx: 4
   num_samples: -1 # -1 for all samples, otherwise specify the number of samples to use from the partition
   single_choice: true
   shuffle_cop: true
   shuffle_order: false
-  cop_key: "cop" # "cop" for original cop, "cop_upd" for conflicting cop, "cop" for inter-conflict setting
+  cop_key: "cop_upd"
 
 task:
-  type: "MCQA"
   name: "question-answering"
-  prompt: 
-    - "utils/prompts/mcq_context.txt"
-    # - ""
+  type: "MCQA"
+  prompt: "utils/prompts/mcq_context.txt"
+    # - "utils/prompts/mcq2.txt"
+    # - "utils/prompts/mcq3.txt"
+  prompt_variance: true
   mcq:
-    exp: true
+    exp: false
     exp_upd: true
-    setting: "inter-conflict"
+    setting: "default"
     # exp_only: true
     # overwrite: true
     # allow_inv_mod_answ: true
@@ -47,7 +47,7 @@ task:
     # save_mod_explanations: true
 
 outputs:
-  path: "outputs/probeMCQ_exp"
+  path: "outputs/probeMCQ_exp-mod"
   print_to_file: true
   file_per_model: true
   clock_time: true

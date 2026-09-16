@@ -32,7 +32,7 @@ def process_samples(samples, shuffle_cop: bool = True, cop_key: str = "cop"):
     Args:
         samples (list): List of sample dictionaries.
         shuffle_cop (bool): Whether to shuffle the cop assignment.
-        cop_key (str): Key to use as cop, either "cop" or "cop_upd"
+        cop_key (str): Key to use as cop, either "cop" for default/synthetic or "cop_upd" for conflicting cop.
         Returns:
         list: Processed samples with updated cop assignments.
     """
@@ -52,7 +52,7 @@ def process_samples(samples, shuffle_cop: bool = True, cop_key: str = "cop"):
             continue # TODO: Handle invalid cop values
         org_cop_ans = sample["op{}".format(org_cop)]
         # Draw random samples from ans options excluding cop
-        rand_op_idx = random.choices(["a", "b", "c", "d"], weights=[i!=sample[cop_key]-1 for i in range(0,4)], k=1)[0]
+        rand_op_idx = random.choices(["a", "b", "c", "d"], weights=[i!=sample["cop_upd"]-1 for i in range(0,4)], k=1)[0]
         new_cop = 1 + ord(rand_op_idx) - ord("a")
         rem_op_ans = [sample["op{}".format(chr(ord("a")+i))] if i != new_cop-1 else org_cop_ans for i in range(0,4)]
         
@@ -66,7 +66,7 @@ def process_samples(samples, shuffle_cop: bool = True, cop_key: str = "cop"):
             "opc": sample[f"op{rand_op_idx}"] if "c" == org_cop else rem_op_ans[2],
             "opd": sample[f"op{rand_op_idx}"] if "d" == org_cop else rem_op_ans[3],
             "cop_new": new_cop,
-            "cop_upd": new_cop, # For either default or conflicting cases
+            "cop_upd": sample["cop_upd"], # For either synthetic or conflicting cases
         } if shuffle_cop else {
             "id": sample["id"],
             "question_upd": sample["question_upd"],
@@ -78,7 +78,7 @@ def process_samples(samples, shuffle_cop: bool = True, cop_key: str = "cop"):
             "opd": sample["opd"],
             "cop": sample["cop"],
             "cop_upd": sample["cop_upd"],
-        }) if (sample["cop_upd"] and sample["mod_context"]) else None # Disregard samples without updated modified contents altogether
+        })
 
         try:
             assert sample[f"op{rand_op_idx}"] != rem_op_ans[new_cop-1]
@@ -94,14 +94,13 @@ def process_samples(samples, shuffle_cop: bool = True, cop_key: str = "cop"):
 def build_prompt(task_type: str, include_exp: bool, prompt_path: str, sys_prompt, sample, shuffle_order: bool = False, exp_upd: bool = False, conf_exp: bool = False):
     if include_exp:
         exp_str = sample.get("exp", "") if (not exp_upd or conf_exp) else ""
-        exp_upd_str = sample.get("exp_upd", "") if (not exp_str or conf_exp) else "" # Modified, synthetic pseudo-explanation
+        exp_upd_str = sample.get("exp_upd", "") if (not exp_str or conf_exp) else exp_str # Modified, synthetic pseudo-explanation
+        print(f"exp_str: {exp_str}, exp_upd_str: {exp_upd_str}")
         if (exp_upd_str and exp_str) and (exp_upd_str != exp_str):
             # Inter-Conflict setting
-            return model_loader.prepare_prompt(task_type, prompt_path, sys_prompt=sys_prompt, processed=sample, exp_str=exp_str, exp_upd_str=exp_upd_str, shuffle_order=shuffle_order)
-        elif exp_upd_str:
-            return model_loader.prepare_prompt(task_type, prompt_path, sys_prompt=sys_prompt, processed=sample, exp_str=exp_str, exp_upd_str=exp_upd_str, shuffle_order=shuffle_order)
+            return model_loader.prepare_prompt(task_type, prompt_path, sys_prompt=sys_prompt, processed=sample, exp_str=exp_str, exp_upd_str=exp_upd_str, conf_exp=conf_exp, shuffle_order=shuffle_order)
         else:
-            return model_loader.prepare_prompt(task_type, prompt_path, sys_prompt=sys_prompt, processed=sample, exp_str=exp_str, exp_upd_str=exp_upd_str, shuffle_order=shuffle_order)
+            return model_loader.prepare_prompt(task_type, prompt_path, sys_prompt=sys_prompt, processed=sample, exp_str=exp_upd_str, conf_exp=conf_exp, shuffle_order=shuffle_order)
     return model_loader.prepare_prompt(task_type, prompt_path, sys_prompt=sys_prompt, processed=sample, shuffle_order=shuffle_order)
 
 
@@ -168,13 +167,13 @@ def run_model(prompt, model=None, tokenizer=None, pipeline=None):
         return decoded_output.strip()
     
 
-def evaluate(task, prompt_path: str, samples, model=None, tokenizer=None, pipeline=None, shuffle_order: bool = False, cop_key: str = "cop_new"):
-    gold, preds, outputs = [], [], []
-    gold_count, pred_count, labels_stats = defaultdict(int), defaultdict(int), defaultdict(lambda: defaultdict(int))
+def evaluate(task, prompt_path: str, samples, model=None, tokenizer=None, pipeline=None, exp_upd: bool = False, conf_exp: bool = False, shuffle_order: bool = False, cop_key: str = "cop_new"):
+    gold, preds, mods, outputs = [], [], [], []
+    gold_count, pred_count, mod_count, labels_stats = defaultdict(int), defaultdict(int), defaultdict(int), defaultdict(lambda: defaultdict(int))
     none_counter = 0
     sys_prompt = "You are a helpful and precise medical assistant for answering multiple-choice questions. Always think step by step."
     for i, sample in enumerate(samples):
-        prompt, (first_lab, last_lab) = build_prompt(task_type=task.type, include_exp=task.mcq.exp, prompt_path=prompt_path, sys_prompt=sys_prompt, sample=sample, shuffle_order=shuffle_order, exp_upd=task.mcq.exp_upd, conf_exp=True if task.mcq.setting == "inter-conflict" else False,)
+        prompt, (first_lab, last_lab) = build_prompt(task_type=task.type, include_exp=include_exp, prompt_path=prompt_path, sys_prompt=sys_prompt, sample=sample, shuffle_order=shuffle_order, exp_upd=exp_upd, conf_exp=conf_exp)
         labels_stats[first_lab]["first"] += 1
         labels_stats[last_lab]["last"] += 1
         sys_prompt = None
@@ -182,13 +181,16 @@ def evaluate(task, prompt_path: str, samples, model=None, tokenizer=None, pipeli
         model_output = run_model(prompt, model=model, tokenizer=tokenizer, pipeline=pipeline)
         pred_choice = extract_choice(model_output)
         gold_choice = chr(ord("A") + sample[cop_key] - 1) 
+        mod_choice = chr(ord("A") + sample["cop_upd"] - 1)
         try:
-            assert sample[cop_key] in [1, 2, 3, 4], f"Invalid cop value: {sample[cop_key]}"
-            assert pred_choice in ["A", "B", "C", "D"], f"Model output does not contain a valid choice: {model_output}"
+            assert sample[cop_key] in [1, 2, 3, 4], f"Invalid cop value: {sample[cop_key]}. Continuing with next sample."
+            assert pred_choice in ["A", "B", "C", "D"], f"Model output does not contain a valid choice: {model_output}. Continuing with next sample."
             preds.append(pred_choice)
             pred_count[pred_choice] += 1
             gold.append(gold_choice) 
             gold_count[gold_choice] += 1 # If outside causes inconsistent prediction counts
+            mod_count[mod_choice] += 1
+            mods.append(mod_choice)
         except AssertionError as e:
             # Convert to nan value for accuracy calculation, but still include in outputs for analysis
             # pred_choice = None
@@ -200,8 +202,9 @@ def evaluate(task, prompt_path: str, samples, model=None, tokenizer=None, pipeli
             "id": sample["id"],
             "model_output": model_output,
             "pred_choice": pred_choice,
-            "gold_choice": gold_choice,        
-        })
+            "gold_choice": gold_choice,    
+            "mod_choice": mod_choice,
+        }) 
 
         # Write outputs directly to JSONL after each sample
         # output_file = Path(run_path, f"output.jsonl")
@@ -233,8 +236,7 @@ if __name__ == "__main__":
     cfg = load_config(args.config)
 
     runs = cfg.run.num_runs
-    shuffle_cop = cfg.data.shuffle_cop
-    shuffle_order = cfg.data.shuffle_order
+    iterations = cfg.run.num_iterations
 
     today = str(dt.datetime.today()).split()
     outputs_path = Path(cfg.outputs.path, today[0], today[1].split(".")[0] if cfg.outputs.clock_time else "")
@@ -242,6 +244,10 @@ if __name__ == "__main__":
 
     # Conflict setting
     setting = cfg.task.mcq.setting if cfg.task.mcq.setting else "default"
+
+    # Empty torch cache to get accurate memory usage
+    print("Emptying torch cache...")
+    torch.cuda.empty_cache()
 
     for run in range(runs):
         start_time_run = time.time()
@@ -261,29 +267,36 @@ if __name__ == "__main__":
         task_prompt = cfg.task.prompt
         
         # Task-specific configuration
-        include_exp = cfg.task.mcq.exp
-        iterations = cfg.run.num_iterations
+        include_exp = cfg.task.mcq.exp or cfg.task.mcq.exp_upd
+        cop_key = cfg.data.cop_key
         
         # Instantiate cleaner for potential use in prompt construction
         data_cleaner = DataCleaner()
         data_cleaner.reset_pruned_exp()
 
+        samples = []
+        for data_file in data_files:
+            print(f"Loading data from {data_file}...")
+            with open(data_file, "r") as f: # Save for each data file in case of multiple files
+                samples += [json.loads(line) for line in f]
+        if cfg.data.single_choice:
+            samples = [s_dict for s_dict in samples if s_dict.get("choice_type") == "single"] # Filter for single choice samples
+            print(f"Samples loaded and filtered for single choice: {len(samples)}")
+        
+        num_samples = cfg.data.num_samples
+        if num_samples != -1:
+            samples = samples[:num_samples]
 
+        # Filter for cop_upd and mod_context samples
+        samples = [s_dict for s_dict in samples if s_dict.get("cop_upd") in range(1, 5) and s_dict.get("mod_context")]
+        print(f"Of {len(samples)} samples, those loaded and filtered for cop_upd and mod_context: {len(samples)}")
+        
+        samples = process_samples(samples, shuffle_cop=cfg.data.shuffle_cop, cop_key=cop_key)
+        cfg.data.num_samples = len(samples) # Update config with actual number of samples loaded
+        
         model_names = cfg.model.name if isinstance(cfg.model.name, (list, ListConfig)) else [cfg.model.name]
+        
         for model_name in model_names:
-            samples = []
-            for data_file in data_files:
-                print(f"Loading data from {data_file}...")
-                with open(data_file, "r") as f: # Save for each data file in case of multiple files
-                    samples += [json.loads(line) for line in f]
-            if cfg.data.single_choice:
-                samples = [s_dict for s_dict in samples if s_dict.get("choice_type") == "single"] # Filter for single choice samples
-                print(f"Samples loaded and filtered for single choice: {len(samples)}")
-            num_samples = cfg.data.num_samples
-            if num_samples != -1:
-                samples = samples[:num_samples]
-            cfg.data.num_samples = len(samples) # Update config with actual number of samples loaded
-
             # Model configuration
             cfg.model.name = model_name
             model_loader = ModelLoader(load_model=model_name, load_tokenizer=cfg.model.load_tokenizer, load_pipeline=cfg.model.load_pipeline)
@@ -303,28 +316,36 @@ if __name__ == "__main__":
             else:
                 sys.stdout = orig_stdout 
 
-
-            # Empty torch cache to get accurate memory usage
-            print("Emptying torch cache...")
-            torch.cuda.empty_cache()
-            samples = process_samples(samples, shuffle_cop=shuffle_cop, cop_key=cfg.data.cop_key)
             for i in range(iterations): # deterministic runs for each model with same samples, but possible options re-ordering, different order of samples and/or prompt construction
                 random.shuffle(samples) # Shuffle samples for each iteration to avoid order bias
                 # Reset pruned_exp in model_loader's for correct monitoring
-                
+                model_loader.pruned_exp = None # Reset pruned_exp for correct monitoring
                 print(f"Running iteration {i+1}/{iterations}")
                 # print(f"Evaluating model with {tokenizer.__class__.__name__}, {model.__class__.__name__}, {pipeline.__class__.__name__ if pipeline else 'No Pipeline'}")
-                outputs, accuracy, f1, conf_matr, outputs_stats, labels_stats = evaluate(cfg.task, task_prompt, samples, model=model, tokenizer=tokenizer, pipeline=pipeline, shuffle_order=shuffle_order, cop_key="cop_new" if cfg.data.shuffle_cop else cfg.data.cop_key)
+                outputs, accuracy, f1, conf_matr, outputs_stats, labels_stats = evaluate(
+                    task=cfg.task, 
+                    prompt_path=task_prompt, 
+                    samples=samples, 
+                    model=model, 
+                    tokenizer=tokenizer, 
+                    pipeline=pipeline, 
+                    exp_upd=cfg.task.mcq.exp_upd, 
+                    conf_exp=True if cfg.task.mcq.setting == "inter-conflict" else False, 
+                    shuffle_order=cfg.data.shuffle_order, 
+                    cop_key="cop_new" if cfg.data.shuffle_cop else cfg.data.cop_key,
+                    )
+                
                 print(f"Accuracy: {accuracy:.4f}, F1 Score: {f1:.4f}")
                 
                 num_first = sum([labels_stats[opt]["first"] for opt in labels_stats]) #TODO: .values() would also work
                 num_last = sum([labels_stats[opt]["last"] for opt in labels_stats])
                 
                 lab_pos_stats = {opt: {"first": "%.2f"%(labels_stats[opt]["first"]/num_first), "last": "%.2f"%(labels_stats[opt]["last"]/num_last)} for opt in labels_stats}
-                print(f"Label position stats: {lab_pos_stats}")
+                # print(f"Label position stats: {lab_pos_stats}")
 
                 num_golds = sum(outputs_stats["gold_count"].values())
                 num_preds = sum(outputs_stats["pred_count"].values())
+                # print(f"Gold stats: {outputs_stats['gold_count']}")
                 pred_stats = {opt: [{"pred_opt": "%.2f"%(outputs_stats["pred_count"][opt]/num_preds), "corr_opt": "%.2f"%(outputs_stats["gold_count"][opt]/num_golds)}] for opt in outputs_stats["gold_count"]}
                 pred_stats["inv"] = [{"count": outputs_stats["inv_outputs"], "rate": "%.2f"%(outputs_stats["inv_outputs"] / num_golds)}] # Ratio of inv outputs of samples
 
@@ -332,7 +353,7 @@ if __name__ == "__main__":
                 recall = np.array([conf_matr[i][i] / conf_matr[i].sum() for i in range(len(outputs_stats["pred_count"]))])
                 [pred_stats[opt].append({"pr": "%.2f"%(precision[i]), "rc": "%.2f"%(recall[i])}) for i, opt in enumerate(sorted(outputs_stats["pred_count"]))]
                 print(f"Prediction stats: {pred_stats}")
-                print(f"Confusion matrix:\n{conf_matr}")
+                # print(f"Confusion matrix:\n{conf_matr}")
 
                 # Dump outputs, accuracy and f1 for analysis
                 result_data = {
@@ -347,7 +368,7 @@ if __name__ == "__main__":
                     "precision": precision.tolist(),
                     "recall": recall.tolist(),
                 }
-                with open(f"{model_path}/outputs{'_exp' if include_exp else ''}_{i+1}.json", "w") as f:
+                with open(f"{model_path}/outputs{f'_exp{'-'.join(cop_key.split('_')[-1])}' if include_exp else ''}_{i+1}.json", "w") as f:
                     json.dump(result_data, f, indent=2)
 
             # Clean up GPU memory before moving to the next model
