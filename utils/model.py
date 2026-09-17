@@ -128,16 +128,14 @@ class ModelLoader:
             ans_opt_pattern = re.compile(r"[\w\s]+(?=[ABCD].)")
             if processed:
                 # print(f"Original base prompt: {base_prompt}")
-                print(f"Processed sample: {processed}, exp_str: {exp_str}, exp_upd_str: {exp_upd_str}")
                 cleaned_exp = self.data_cleaner.clean_exp_with_cop(exp_str, processed.get(
                         f"op{chr(ord('a')+processed['cop_new']-1)}", ""
                         )) if exp_str else ""
-                print(f"Cop_new: {processed.get('cop_new', '')}, Cop_upd: {processed.get('cop_upd', '')}")
                 cleaned_exp_upd = self.data_cleaner.clean_exp_with_cop(exp_upd_str, processed.get(
                         f"op{chr(ord('a')+processed['cop_upd']-1)}", ""
                         )) if conf_exp else ""  
-                print(f"Cleaned explanation: {cleaned_exp}")
-                print(f"Cleaned updated explanation: {cleaned_exp_upd}")
+                # print(f"Cleaned explanation: {cleaned_exp}")
+                # print(f"Cleaned updated explanation: {cleaned_exp_upd}")
                 options = [processed.get(f"opa", ""), processed.get(f"opb", ""), processed.get(f"opc", ""), processed.get(f"opd", "")]
                 option_labels = ['A', 'B', 'C', 'D']
                 base_prompt = base_prompt.format(

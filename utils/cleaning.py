@@ -28,13 +28,12 @@ class DataCleaner:
         :return: If matched, an answer-pruned explanation, otherwise original is returned
         """
         # print("Original explanation:", exp, "with cop:", cop)
-        print(exp, cop)
         assert cop not in ("", None), f"Detected empty-string cop, consider adjusting regex pattern."
         ans_exp_pat = r"^(Ans[.:]?|Answer-?)\s*(?:\s*is\.?\s*)?\s*\(?'?[A-Za-z]'?\)?"
         leak_prompt_pat = r"here is the re-?written (text|explanation):\n"
         leak_prompt_match = re.search(leak_prompt_pat, exp, re.IGNORECASE)
         if leak_prompt_match:
-            print("Leak prompt detected:", leak_prompt_match.group(0))
+            # print("Leak prompt detected:", leak_prompt_match.group(0))
             exp = exp.replace(leak_prompt_match.group(0), "").lstrip()
             self.pruned_exp += 1
         ans_exp_match = re.match(fr"{ans_exp_pat}(.*?){cop}", exp, re.DOTALL)

@@ -46,7 +46,7 @@ task:
     # save_mod_explanations: true
 
 outputs:
-  path: "outputs/probeMCQ_exp"
+  path: "outputs/probeMCQ_exp-conf"
   print_to_file: true
   file_per_model: true
   clock_time: true

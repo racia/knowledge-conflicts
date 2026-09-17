@@ -93,9 +93,8 @@ def process_samples(samples, shuffle_cop: bool = True, cop_key: str = "cop"):
 
 def build_prompt(task_type: str, include_exp: bool, prompt_path: str, sys_prompt, sample, shuffle_order: bool = False, exp_upd: bool = False, conf_exp: bool = False):
     if include_exp:
-        exp_str = sample.get("exp", "") if (not exp_upd or conf_exp) else ""
-        exp_upd_str = sample.get("exp_upd", "") if (not exp_str or conf_exp) else exp_str # Modified, synthetic pseudo-explanation
-        print(f"exp_str: {exp_str}, exp_upd_str: {exp_upd_str}")
+        exp_str = sample.get("exp", "") if not exp_upd or conf_exp else ""
+        exp_upd_str = sample.get("exp_upd", "") if not exp_str or conf_exp else exp_str # Modified, synthetic pseudo-explanation
         if (exp_upd_str and exp_str) and (exp_upd_str != exp_str):
             # Inter-Conflict setting
             return model_loader.prepare_prompt(task_type, prompt_path, sys_prompt=sys_prompt, processed=sample, exp_str=exp_str, exp_upd_str=exp_upd_str, conf_exp=conf_exp, shuffle_order=shuffle_order)
@@ -269,6 +268,7 @@ if __name__ == "__main__":
         # Task-specific configuration
         include_exp = cfg.task.mcq.exp or cfg.task.mcq.exp_upd
         cop_key = cfg.data.cop_key
+        conf_exp = True if cfg.task.mcq.setting == "inter-conflict" else False
         
         # Instantiate cleaner for potential use in prompt construction
         data_cleaner = DataCleaner()
@@ -280,7 +280,7 @@ if __name__ == "__main__":
             with open(data_file, "r") as f: # Save for each data file in case of multiple files
                 samples += [json.loads(line) for line in f]
         if cfg.data.single_choice:
-            samples = [s_dict for s_dict in samples if s_dict.get("choice_type") == "single"] # Filter for single choice samples
+            samples = [s_dict for s_dict in samples if s_dict.get("choice_type") == "single" and s_dict.get("cop") in range(1, 5)] # Filter for single choice samples
             print(f"Samples loaded and filtered for single choice: {len(samples)}")
         
         num_samples = cfg.data.num_samples
@@ -330,7 +330,7 @@ if __name__ == "__main__":
                     tokenizer=tokenizer, 
                     pipeline=pipeline, 
                     exp_upd=cfg.task.mcq.exp_upd, 
-                    conf_exp=True if cfg.task.mcq.setting == "inter-conflict" else False, 
+                    conf_exp=conf_exp, 
                     shuffle_order=cfg.data.shuffle_order, 
                     cop_key="cop_new" if cfg.data.shuffle_cop else cfg.data.cop_key,
                     )
@@ -352,7 +352,7 @@ if __name__ == "__main__":
                 precision = np.array([conf_matr[i][i] / conf_matr.sum(axis=0)[i] for i in range(len(outputs_stats["pred_count"]))])
                 recall = np.array([conf_matr[i][i] / conf_matr[i].sum() for i in range(len(outputs_stats["pred_count"]))])
                 [pred_stats[opt].append({"pr": "%.2f"%(precision[i]), "rc": "%.2f"%(recall[i])}) for i, opt in enumerate(sorted(outputs_stats["pred_count"]))]
-                print(f"Prediction stats: {pred_stats}")
+                # print(f"Prediction stats: {pred_stats}")
                 # print(f"Confusion matrix:\n{conf_matr}")
 
                 # Dump outputs, accuracy and f1 for analysis
@@ -368,7 +368,7 @@ if __name__ == "__main__":
                     "precision": precision.tolist(),
                     "recall": recall.tolist(),
                 }
-                with open(f"{model_path}/outputs{f'_exp{'-'.join(cop_key.split('_')[-1])}' if include_exp else ''}_{i+1}.json", "w") as f:
+                with open(f"{model_path}/outputs{f'_exp-{cop_key[-3:]}' if include_exp else ''}_{i+1}.json", "w") as f:
                     json.dump(result_data, f, indent=2)
 
             # Clean up GPU memory before moving to the next model
