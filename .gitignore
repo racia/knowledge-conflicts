@@ -23,4 +23,6 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-scripts/probeMCQ_exp-conf.sh
+
+# Slurm scripts
+scripts/
