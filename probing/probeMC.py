@@ -93,8 +93,8 @@ def process_samples(samples, shuffle_cop: bool = True, cop_key: str = "cop"):
 
 def build_prompt(task_type: str, include_exp: bool, prompt_path: str, sys_prompt, sample, shuffle_order: bool = False, exp_upd: bool = False, conf_exp: bool = False):
     if include_exp:
-        exp_str = sample.get("exp", "") if not exp_upd or conf_exp else ""
-        exp_upd_str = sample.get("exp_upd", "") if not exp_str or conf_exp else exp_str # Modified, synthetic pseudo-explanation
+        exp_str = sample.get("exp", "") if (not exp_upd or conf_exp) else ""
+        exp_upd_str = sample.get("exp_upd", "") if (not exp_str or conf_exp) else exp_str # Modified, synthetic pseudo-explanation
         if (exp_upd_str and exp_str) and (exp_upd_str != exp_str):
             # Inter-Conflict setting
             return model_loader.prepare_prompt(task_type, prompt_path, sys_prompt=sys_prompt, processed=sample, exp_str=exp_str, exp_upd_str=exp_upd_str, conf_exp=conf_exp, shuffle_order=shuffle_order)

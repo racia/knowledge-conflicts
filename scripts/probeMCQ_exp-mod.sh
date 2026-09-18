@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
 #SBATCH --job-name=probeMC
-#SBATCH --output=probeMC_out-%j
-#SBATCH --error=probeMC_err-%j
+#SBATCH --output=probeMC-mod_out-%j
+#SBATCH --error=probeMC-mod_err-%j
 # SBATCH --partition=students
 #SBATCH --ntasks=1
 # SBATCH --nodelist=gpu08
