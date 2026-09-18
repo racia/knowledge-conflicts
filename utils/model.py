@@ -133,7 +133,7 @@ class ModelLoader:
                         )) if exp_str else ""
                 cleaned_exp_upd = self.data_cleaner.clean_exp_with_cop(exp_upd_str, processed.get(
                         f"op{chr(ord('a')+processed['cop_upd']-1)}", ""
-                        )) if conf_exp else ""  
+                        )) if conf_exp and exp_upd_str else ""  
                 # print(f"Cleaned explanation: {cleaned_exp}")
                 # print(f"Cleaned updated explanation: {cleaned_exp_upd}")
                 options = [processed.get(f"opa", ""), processed.get(f"opb", ""), processed.get(f"opc", ""), processed.get(f"opd", "")]

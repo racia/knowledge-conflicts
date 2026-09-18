@@ -7,7 +7,7 @@
 #SBATCH --ntasks=1
 # SBATCH --nodelist=gpu08
 #SBATCH --mem=64G
-# SBATCH --time=00:29:29 #(~15 min for 1.7k sampples * 3 models)
+#SBATCH --time=01:45:59 #(~15 min for 1.7k sampples * 3 models)
 #SBATCH --cpus-per-task=2
 #SBATCH --gres=gpu:2
 #SBATCH --mail-user=sari@cl.uni-heidelberg.de

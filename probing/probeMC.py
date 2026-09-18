@@ -179,7 +179,7 @@ def evaluate(task, prompt_path: str, samples, model=None, tokenizer=None, pipeli
         print(f"Running model with prompt: {prompt}")
         model_output = run_model(prompt, model=model, tokenizer=tokenizer, pipeline=pipeline)
         pred_choice = extract_choice(model_output)
-        gold_choice = chr(ord("A") + sample[cop_key] - 1) 
+        gold_choice = chr(ord("A") + sample["cop_new"] - 1) 
         mod_choice = chr(ord("A") + sample["cop_upd"] - 1)
         try:
             assert sample[cop_key] in [1, 2, 3, 4], f"Invalid cop value: {sample[cop_key]}. Continuing with next sample."
