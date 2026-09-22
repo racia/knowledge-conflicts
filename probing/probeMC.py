@@ -291,7 +291,7 @@ if __name__ == "__main__":
         samples = [s_dict for s_dict in samples if s_dict.get("cop_upd") in range(1, 5) and s_dict.get("mod_context")]
         print(f"Of {len(samples)} samples, those loaded and filtered for cop_upd and mod_context: {len(samples)}")
         
-        samples = process_samples(samples, shuffle_cop=cfg.data.shuffle_cop, cop_key=cop_key)
+        samples = process_samples(samples, shuffle_cop=cfg.data.shuffle_cop, cop_key="cop")
         cfg.data.num_samples = len(samples) # Update config with actual number of samples loaded
         
         model_names = cfg.model.name if isinstance(cfg.model.name, (list, ListConfig)) else [cfg.model.name]
