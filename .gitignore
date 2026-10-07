@@ -26,4 +26,3 @@ __pycache__/
 
 # Slurm scripts
 scripts/
-scripts/probeMCQ_exp-mod.sh

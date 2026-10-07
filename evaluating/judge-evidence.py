@@ -1,6 +1,5 @@
 # Script for LLM-as-a-judge to evaluate pair-wise evidence based on provided metrics, saved in a JSON file.
 
-
 import csv
 import json
 from random import shuffle
