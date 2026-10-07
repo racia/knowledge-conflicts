@@ -1,0 +1,8 @@
+\n\nYou will receive a medical MCQ. Choose the correct option from those provided. Format your response exactly as follows:\n
+Question: {question}
+Context: {context}{context_upd}
+A. {opa}
+B. {opb}
+C. {opc}
+D. {opd}\n
+Answer solely with the corresponding letter (A, B, C, or D)

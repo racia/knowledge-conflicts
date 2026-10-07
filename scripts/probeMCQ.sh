@@ -5,8 +5,8 @@
 #SBATCH --error=probeMC_err-%j
 # SBATCH --partition=students
 #SBATCH --ntasks=1
-#SBATCH --time=00:29:29
-#SBATCH --mem=128G
+#SBATCH --time=00:29:59
+#SBATCH --mem=64G
 #SBATCH --cpus-per-task=2
 #SBATCH --gres=gpu:2
 #SBATCH --mail-user=sari@cl.uni-heidelberg.de
@@ -44,6 +44,9 @@ export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,expandable_segments:True"
 
 conda activate kc
 SCRIPT="probing/probeMC.py"
+
+# Load CUDA module
+module load devel/cuda/12.8
 
 # splits=(train)  # possible values: dev, test, train
 # source="cleaned" # classical: "original/clean_spaces_id", for explanations: "cleaned"

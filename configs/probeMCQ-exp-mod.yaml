@@ -1,7 +1,7 @@
 model: 
   name: 
-    - "Qwen/Qwen2.5-7B-Instruct"
-    - "meta-llama/Meta-Llama-3-8B-Instruct"
+    # - "Qwen/Qwen2.5-7B-Instruct"
+    # - "meta-llama/Meta-Llama-3-8B-Instruct"
     - "mistralai/Mistral-7B-Instruct-v0.3"
   load_model: true
   load_tokenizer: true
@@ -9,7 +9,7 @@ model:
   apply_chat_template: true
   add_generation_prompt: true # False for Llama
   load_pipeline: false
-  enable_thinking: false # Default true for qwen 
+  enable_thinking: true # Default true for qwen 
   
 data:
   path: "data/MedMCQA/synthetic"
@@ -30,10 +30,10 @@ data:
 task:
   name: "question-answering"
   type: "MCQA"
-  prompt: "utils/prompts/mcq_context.txt"
-    # - "utils/prompts/mcq2.txt"
-    # - "utils/prompts/mcq3.txt"
-  prompt_variance: true
+  prompts: 
+    # - "utils/prompts/mcq_context1.txt"
+    - "utils/prompts/mcq_context2.txt"
+    - "utils/prompts/mcq_context3.txt"
   mcq:
     exp: false
     exp_upd: true
@@ -53,6 +53,6 @@ outputs:
   clock_time: true
 
 run:
-  single_run: False
+  single_run: True
   num_runs: 1
   num_iterations: 1

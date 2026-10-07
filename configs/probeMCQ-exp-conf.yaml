@@ -9,7 +9,7 @@ model:
   apply_chat_template: true
   add_generation_prompt: true # False for Llama
   load_pipeline: false
-  enable_thinking: false # Default true for qwen 
+  enable_thinking: true # Default true for qwen 
 
 
 data:
@@ -31,8 +31,10 @@ data:
 task:
   type: "MCQA"
   name: "question-answering"
-  prompt: "utils/prompts/mcq_context.txt"
-    # - ""
+  prompts:
+    - "utils/prompts/mcq_context1.txt"
+    # - "utils/prompts/mcq_context2.txt"
+    # - "utils/prompts/mcq_context3.txt"
   mcq:
     exp: true
     exp_upd: true
@@ -52,6 +54,6 @@ outputs:
   clock_time: true
 
 run:
-  single_run: False
+  single_run: True
   num_runs: 1
   num_iterations: 1

@@ -9,7 +9,7 @@ model:
   apply_chat_template: true
   add_generation_prompt: true # False for Llama
   load_pipeline: false
-  enable_thinking: false # Default true for qwen 
+  enable_thinking: true # Default true for qwen 
   
 data:
   path: "data/MedMCQA/synthetic"
@@ -30,9 +30,10 @@ data:
 task:
   name: "question-answering"
   type: "MCQA"
-  prompt: "utils/prompts/mcq1.txt"
-    # - "utils/prompts/mcq2.txt"
-    # - "utils/prompts/mcq3.txt"
+  prompts: 
+    - "utils/prompts/mcq1.txt"
+    - "utils/prompts/mcq2.txt"
+    - "utils/prompts/mcq3.txt"
   prompt_variance: true
   mcq:
     exp: false
@@ -53,6 +54,6 @@ outputs:
   clock_time: true
 
 run:
-  single_run: False
+  single_run: True
   num_runs: 1
   num_iterations: 1

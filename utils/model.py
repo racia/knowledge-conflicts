@@ -69,7 +69,7 @@ class ModelLoader:
                 "dtype": torch.bfloat16,
                 "quantization_config": quantization_config,
                 # "temperature": 0.7,
-                "attn_implementation": "eager",
+                "attn_implementation": "eager",#"flash_attention_3", # from previous 'eager'
                 "low_cpu_mem_usage": True,
                 "offload_folder": "offload_folder",
                 "offload_state_dict": True,
@@ -138,10 +138,12 @@ class ModelLoader:
                 # print(f"Cleaned updated explanation: {cleaned_exp_upd}")
                 options = [processed.get(f"opa", ""), processed.get(f"opb", ""), processed.get(f"opc", ""), processed.get(f"opd", "")]
                 option_labels = ['A', 'B', 'C', 'D']
+                # Shuffle order of contexts
+                context, context_upd = random.sample([cleaned_exp if exp_str else "", cleaned_exp_upd if exp_upd_str else ""], 2)
                 base_prompt = base_prompt.format(
                     question=processed.get("question_upd", ""),
-                    context=cleaned_exp if exp_str else "", 
-                    context_upd="\n"+cleaned_exp_upd if exp_upd_str else "", # TODO: Check simultaneous use
+                    context=context if context else "", 
+                    context_upd="\n"+context_upd if context_upd else "", # TODO: Check simultaneous use
                     opa=options[0],
                     opb=options[1],
                     opc=options[2],

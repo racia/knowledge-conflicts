@@ -3,11 +3,11 @@
 #SBATCH --job-name=probeMC
 #SBATCH --output=probeMC_out-%j
 #SBATCH --error=probeMC_err-%j
-#SBATCH --partition=students
+# SBATCH --partition=students
 #SBATCH --ntasks=1
 # SBATCH --nodelist=gpu08
 #SBATCH --mem=64G
-#SBATCH --time=00:29:29 #(~15 min for 1.7k sampples * 3 models)
+#SBATCH --time=10:00:00 #(~15 min for 1.7k sampples * 3 models)
 #SBATCH --cpus-per-task=2
 #SBATCH --gres=gpu:1
 #SBATCH --mail-user=sari@cl.uni-heidelberg.de
@@ -40,11 +40,14 @@ MONITOR_PID=$!#
 source ~/.bashrc 2>/dev/null
 echo "Activating conda env..."
 
+# Load CUDA module
+module load devel/cuda/12.8
+
 export CUDA_VISIBLE_DEVICES=${SLURM_JOB_GPUS:-}
 export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,expandable_segments:True"
 
-#conda activate kc #1
-source .venv/bin/activate
+conda activate kc
+# source .venv/bin/activate
 SCRIPT="probing.probeMC"
 
 # splits=(train)  # possible values: dev, test, train

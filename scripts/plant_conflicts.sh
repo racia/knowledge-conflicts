@@ -3,14 +3,14 @@
 #SBATCH --job-name=plant_q
 #SBATCH --output=planting_q_out
 #SBATCH --error=planting_q_err
-#SBATCH --partition=gpu_a100_short
-#SBATCH --time=00:29:00
+# SBATCH --partition=gpu_a100_short
+#SBATCH --time=12:00:00
 # SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
-#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=2
+#SBATCH --gres=gpu:2
 # SBATCH --nodelist=gpu09
 # SBATCH --mem-per-gpu=10G
-#SBATCH --mem=24G
+#SBATCH --mem=64G
 #SBATCH --mail-user=sari@cl.uni-heidelberg.de
 #SBATCH --mail-type=ALL
 
@@ -29,7 +29,7 @@ esac
 
 source ~/.bashrc 2>/dev/null
 echo "Activating conda env..."
-conda activate kc
+conda activate kc1
 
 export CUDA_VISIBLE_DEVICES=${SLURM_JOB_GPUS:-}
 export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,expandable_segments:True"
@@ -37,7 +37,7 @@ export PYTORCH_CUDA_ALLOC_CONF="max_split_size_mb:128,expandable_segments:True"
 splits=(train)  # possible values: dev, test, train
 source="cleaned" # classical: "original/clean_spaces_id", for explanations: "cleaned"
 #task="question"  # question, classification, explanation
-srun python3 planting/conflict_planting.py --splits "${splits[@]}" --source "$source"
+srun python -m planting/conflict_planting.py --splits "${splits[@]}" --source "$source"
 
 if [ $? -eq 0 ]; then
     echo "Python script conflict_planting.py executed successfully."

@@ -108,7 +108,7 @@ def extract_choice(text):
     return match.group(1).upper() if match else None
 
 
-def run_model(prompt, model=None, tokenizer=None, pipeline=None):
+def run_model(prompt, model=None, tokenizer=None, pipeline=None, add_generation_prompt=True, enable_thinking=False):
     with torch.inference_mode():
         # Handle string prompt splitting cleanly
         parts = prompt.split("\n\n", 1) if "\n\n" in prompt else prompt.split("\\n\\n", 1)
@@ -120,7 +120,8 @@ def run_model(prompt, model=None, tokenizer=None, pipeline=None):
                 [{"role": "system", "content": sys_content},
                  {"role": "user", "content": user_content}],
                 tokenize=False,
-                add_generation_prompt=True,
+                add_generation_prompt=add_generation_prompt,
+                enable_thinking=enable_thinking,
             )
             terminators = [
                 pipeline.tokenizer.eos_token_id,
@@ -132,7 +133,8 @@ def run_model(prompt, model=None, tokenizer=None, pipeline=None):
                     max_new_tokens=256,
                     eos_token_id=terminators,
                     do_sample=True,
-                    temperature=0.0,
+                    temperature=0.7,
+                    top_k=50,
                     top_p=0.9,
                 )
             generated_text = outputs[0]["generated_text"]
@@ -143,10 +145,11 @@ def run_model(prompt, model=None, tokenizer=None, pipeline=None):
         model_inputs = tokenizer.apply_chat_template(
             [{"role": "system", "content": sys_content},
              {"role": "user", "content": user_content}],
-            add_generation_prompt=cfg.model.add_generation_prompt,
+            add_generation_prompt=add_generation_prompt,
             tokenize=True,
             return_dict=True,
             return_tensors="pt",
+            enable_thinking=enable_thinking,
         ).to(model.device)
 
         input_length = model_inputs["input_ids"].shape[1]
@@ -154,10 +157,13 @@ def run_model(prompt, model=None, tokenizer=None, pipeline=None):
         with torch.autocast("cuda"):
             outputs = model.generate(
                 **model_inputs,
-                max_new_tokens=10,
+                cache_implementation="static",
+                max_new_tokens=256,
+                do_sample=True,
                 temperature=0.7,
-                do_sample=False,
-            )
+                top_k=50,
+                top_p=0.95
+                )
 
         # Slice generated token IDs directly before decoding
         new_tokens = outputs[0][input_length:]
@@ -166,7 +172,7 @@ def run_model(prompt, model=None, tokenizer=None, pipeline=None):
         return decoded_output.strip()
     
 
-def evaluate(task, prompt_path: str, samples, model=None, tokenizer=None, pipeline=None, exp_upd: bool = False, conf_exp: bool = False, shuffle_order: bool = False, cop_key: str = "cop_new"):
+def evaluate(task, prompt_path: str, samples, model=None, tokenizer=None, pipeline=None, exp_upd: bool = False, conf_exp: bool = False, shuffle_order: bool = False, cop_key: str = "cop_new", add_generation_prompt: bool = True, enable_thinking: bool = False):
     gold, preds, mods, outputs = [], [], [], []
     gold_count, pred_count, mod_count, labels_stats = defaultdict(int), defaultdict(int), defaultdict(int), defaultdict(lambda: defaultdict(int))
     none_counter = 0
@@ -177,7 +183,7 @@ def evaluate(task, prompt_path: str, samples, model=None, tokenizer=None, pipeli
         labels_stats[last_lab]["last"] += 1
         sys_prompt = None
         print(f"Running model with prompt: {prompt}")
-        model_output = run_model(prompt, model=model, tokenizer=tokenizer, pipeline=pipeline)
+        model_output = run_model(prompt, model=model, tokenizer=tokenizer, pipeline=pipeline, add_generation_prompt=add_generation_prompt, enable_thinking=enable_thinking)
         pred_choice = extract_choice(model_output)
         gold_choice = chr(ord("A") + sample["cop_new"] - 1) 
         mod_choice = chr(ord("A") + sample["cop_upd"] - 1)
@@ -263,7 +269,7 @@ if __name__ == "__main__":
         # Task configuration
         task_type = cfg.task.type
         task_name = cfg.task.name
-        task_prompt = cfg.task.prompt
+        task_prompts = cfg.task.prompts if isinstance(cfg.task.prompts, (list, ListConfig)) else [cfg.task.prompts]
         
         # Task-specific configuration
         include_exp = cfg.task.mcq.exp or cfg.task.mcq.exp_upd
@@ -298,7 +304,6 @@ if __name__ == "__main__":
         
         for model_name in model_names:
             # Model configuration
-            cfg.model.name = model_name
             model_loader = ModelLoader(load_model=model_name, load_tokenizer=cfg.model.load_tokenizer, load_pipeline=cfg.model.load_pipeline)
             model, tokenizer, pipeline = model_loader.load_model_tokenizer(model_name=model_name)
             model_path = Path(run_path, model_name.split("/")[0].lower())
@@ -316,60 +321,66 @@ if __name__ == "__main__":
             else:
                 sys.stdout = orig_stdout 
 
-            for i in range(iterations): # deterministic runs for each model with same samples, but possible options re-ordering, different order of samples and/or prompt construction
-                random.shuffle(samples) # Shuffle samples for each iteration to avoid order bias
-                # Reset pruned_exp in model_loader's for correct monitoring
-                model_loader.pruned_exp = None # Reset pruned_exp for correct monitoring
-                print(f"Running iteration {i+1}/{iterations}")
-                # print(f"Evaluating model with {tokenizer.__class__.__name__}, {model.__class__.__name__}, {pipeline.__class__.__name__ if pipeline else 'No Pipeline'}")
-                outputs, accuracy, f1, conf_matr, outputs_stats, labels_stats = evaluate(
-                    task=cfg.task, 
-                    prompt_path=task_prompt, 
-                    samples=samples, 
-                    model=model, 
-                    tokenizer=tokenizer, 
-                    pipeline=pipeline, 
-                    exp_upd=cfg.task.mcq.exp_upd, 
-                    conf_exp=conf_exp, 
-                    shuffle_order=cfg.data.shuffle_order, 
-                    cop_key="cop_new" if cfg.data.shuffle_cop else cfg.data.cop_key,
-                    )
-                
-                print(f"Accuracy: {accuracy:.4f}, F1 Score: {f1:.4f}")
-                
-                num_first = sum([labels_stats[opt]["first"] for opt in labels_stats]) #TODO: .values() would also work
-                num_last = sum([labels_stats[opt]["last"] for opt in labels_stats])
-                
-                lab_pos_stats = {opt: {"first": "%.2f"%(labels_stats[opt]["first"]/num_first), "last": "%.2f"%(labels_stats[opt]["last"]/num_last)} for opt in labels_stats}
-                # print(f"Label position stats: {lab_pos_stats}")
+            for task_prompt, prompt_path in enumerate(task_prompts):
+                print(f"Using task prompt: {prompt_path}")
 
-                num_golds = sum(outputs_stats["gold_count"].values())
-                num_preds = sum(outputs_stats["pred_count"].values())
-                # print(f"Gold stats: {outputs_stats['gold_count']}")
-                pred_stats = {opt: [{"pred_opt": "%.2f"%(outputs_stats["pred_count"][opt]/num_preds), "corr_opt": "%.2f"%(outputs_stats["gold_count"][opt]/num_golds)}] for opt in outputs_stats["gold_count"]}
-                pred_stats["inv"] = [{"count": outputs_stats["inv_outputs"], "rate": "%.2f"%(outputs_stats["inv_outputs"] / num_golds)}] # Ratio of inv outputs of samples
+                for i in range(iterations): # deterministic runs for each model with same samples, but possible options re-ordering, different order of samples and/or prompt construction
+                    random.shuffle(samples) # Shuffle samples for each iteration to avoid order bias
+                    # Reset pruned_exp in model_loader's for correct monitoring
+                    model_loader.pruned_exp = None # Reset pruned_exp for correct monitoring
+                    print(f"Running iteration {i+1}/{iterations}")
+                    # print(f"Evaluating model with {tokenizer.__class__.__name__}, {model.__class__.__name__}, {pipeline.__class__.__name__ if pipeline else 'No Pipeline'}")
+                    outputs, accuracy, f1, conf_matr, outputs_stats, labels_stats = evaluate(
+                        task=cfg.task, 
+                        prompt_path=prompt_path, 
+                        samples=samples, 
+                        model=model, 
+                        tokenizer=tokenizer, 
+                        pipeline=pipeline,
+                        exp_upd=cfg.task.mcq.exp_upd, 
+                        conf_exp=conf_exp, 
+                        shuffle_order=cfg.data.shuffle_order, 
+                        cop_key="cop_new" if cfg.data.shuffle_cop else cfg.data.cop_key,
+                        add_generation_prompt=cfg.model.add_generation_prompt,
+                        enable_thinking=cfg.model.enable_thinking,
+                        )
+                    
+                    print(f"Accuracy: {accuracy:.4f}, F1 Score: {f1:.4f}")
+                    
+                    num_first = sum([labels_stats[opt]["first"] for opt in labels_stats]) #TODO: .values() would also work
+                    num_last = sum([labels_stats[opt]["last"] for opt in labels_stats])
+                    
+                    lab_pos_stats = {opt: {"first": "%.2f"%(labels_stats[opt]["first"]/num_first), "last": "%.2f"%(labels_stats[opt]["last"]/num_last)} for opt in labels_stats}
+                    # print(f"Label position stats: {lab_pos_stats}")
 
-                precision = np.array([conf_matr[i][i] / conf_matr.sum(axis=0)[i] for i in range(len(outputs_stats["pred_count"]))])
-                recall = np.array([conf_matr[i][i] / conf_matr[i].sum() for i in range(len(outputs_stats["pred_count"]))])
-                [pred_stats[opt].append({"pr": "%.2f"%(precision[i]), "rc": "%.2f"%(recall[i])}) for i, opt in enumerate(sorted(outputs_stats["pred_count"]))]
-                # print(f"Prediction stats: {pred_stats}")
-                # print(f"Confusion matrix:\n{conf_matr}")
+                    num_golds = sum(outputs_stats["gold_count"].values())
+                    num_preds = sum(outputs_stats["pred_count"].values())
+                    # print(f"Gold stats: {outputs_stats['gold_count']}")
+                    pred_stats = {opt: [{"pred_opt": "%.2f"%(outputs_stats["pred_count"][opt]/num_preds), "corr_opt": "%.2f"%(outputs_stats["gold_count"][opt]/num_golds)}] for opt in outputs_stats["gold_count"]}
+                    pred_stats["inv"] = [{"count": outputs_stats["inv_outputs"], "rate": "%.2f"%(outputs_stats["inv_outputs"] / num_golds)}] # Ratio of inv outputs of samples
 
-                # Dump outputs, accuracy and f1 for analysis
-                result_data = {
-                    "time": str(dt.datetime.today()).split(".")[0],
-                    "config": OmegaConf.to_container(cfg, resolve=True),
-                    "outputs": outputs,
-                    "accuracy": accuracy,
-                    "f1": f1,
-                    "pruned_exp": model_loader.data_cleaner.pruned_exp,
-                    "pred_stats": pred_stats,
-                    "lab_pos_stats": lab_pos_stats,
-                    "precision": precision.tolist(),
-                    "recall": recall.tolist(),
-                }
-                with open(f"{model_path}/outputs{f'_exp-{cop_key[-3:]}' if include_exp else ''}_{i+1}.json", "w") as f:
-                    json.dump(result_data, f, indent=2)
+                    precision = np.array([conf_matr[i][i] / conf_matr.sum(axis=0)[i] for i in range(len(outputs_stats["pred_count"]))])
+                    recall = np.array([conf_matr[i][i] / conf_matr[i].sum() for i in range(len(outputs_stats["pred_count"]))])
+                    [pred_stats[opt].append({"pr": "%.2f"%(precision[i]), "rc": "%.2f"%(recall[i])}) for i, opt in enumerate(sorted(outputs_stats["pred_count"]))]
+                    # print(f"Prediction stats: {pred_stats}")
+                    # print(f"Confusion matrix:\n{conf_matr}")
+
+                    # Dump outputs, accuracy and f1 for analysis
+                    result_data = {
+                        "time": str(dt.datetime.today()).split(".")[0],
+                        "config": OmegaConf.to_container(cfg, resolve=True),
+                        "prompt_path": prompt_path,
+                        "outputs": outputs,
+                        "accuracy": accuracy,
+                        "f1": f1,
+                        "pruned_exp": model_loader.data_cleaner.pruned_exp,
+                        "pred_stats": pred_stats,
+                        "lab_pos_stats": lab_pos_stats,
+                        "precision": precision.tolist(),
+                        "recall": recall.tolist(),
+                    }
+                    with open(f"{model_path}/outputs{f'_exp-{cop_key[-3:]}' if include_exp else ''}_{i+1}_{prompt_path.split('/')[-1].split('.')[0]}.json", "w") as f:
+                        json.dump(result_data, f, indent=2)
 
             # Clean up GPU memory before moving to the next model
             del model, tokenizer, pipeline, model_loader
