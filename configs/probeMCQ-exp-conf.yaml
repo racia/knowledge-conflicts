@@ -1,8 +1,8 @@
 model: 
   name: 
     - "Qwen/Qwen2.5-7B-Instruct"
-    - "meta-llama/Meta-Llama-3-8B-Instruct"
-    - "mistralai/Mistral-7B-Instruct-v0.3"
+    # - "meta-llama/Meta-Llama-3-8B-Instruct"
+    # - "mistralai/Mistral-7B-Instruct-v0.3"
   load_model: true
   load_tokenizer: true
   tokenize: true # True for Llama
@@ -33,8 +33,8 @@ task:
   name: "question-answering"
   prompts:
     - "utils/prompts/mcq_context1.txt"
-    # - "utils/prompts/mcq_context2.txt"
-    # - "utils/prompts/mcq_context3.txt"
+    - "utils/prompts/mcq_context2.txt"
+    - "utils/prompts/mcq_context3.txt"
   mcq:
     exp: true
     exp_upd: true

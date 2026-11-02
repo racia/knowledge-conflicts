@@ -20,7 +20,11 @@ def process_evidence(data, json_file=None):
         with open(json_file, "r") as json_f:
             existing_results = json.load(json_f)
             last_processed_id = existing_results[-1]["Id"]
-            last_processed_index = next(i for i, row in enumerate(data) if row["Id"] == last_processed_id)
+            try:
+                last_processed_index = next(i for i, row in enumerate(data) if row["Id"] == last_processed_id)
+            except StopIteration as e:
+                print(str(e))
+                last_processed_index = 0
             print(f"Last processed ID: {last_processed_id}, Index: {last_processed_index}. Continuing from the next evidence pair.")
             data = data[last_processed_index + 1:]  # Only process new evidence pairs
     except FileNotFoundError:
@@ -126,7 +130,7 @@ def evaluate_evidence(evidence_pair):
 
 if __name__ == "__main__":
     # Process the CSV file
-    file_path = "./data/MedMCQA/evidence_data.csv"
+    file_path = "./data/MedMCQA/ev_dat_supp.csv"
     data = process_file(file_path)
     # Save the results to a JSON file, appending to existing results if the file already exists
     output_file = "./data/MedMCQA/evidence_evaluation_results.json"

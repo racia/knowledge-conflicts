@@ -31,7 +31,7 @@ task:
   name: "question-answering"
   type: "MCQA"
   prompts: 
-    # - "utils/prompts/mcq_context1.txt"
+    - "utils/prompts/mcq_context1.txt"
     - "utils/prompts/mcq_context2.txt"
     - "utils/prompts/mcq_context3.txt"
   mcq:
